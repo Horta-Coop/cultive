@@ -21,5 +21,7 @@ Para mais informações, entre em contato:
 
 ## Links de prototipo
 Garden Hub 1: horta-comunitaria-gestao-plena.lovable.app
+
 Garden Hub 2: community-garden-manager.lovable.app
+
 Garden Hub 3: gardenhub.lovable.app
