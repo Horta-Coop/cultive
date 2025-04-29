@@ -17,12 +17,9 @@ Garden Share é uma iniciativa de horta comunitária que visa promover a agricul
 ## Contato
 Para mais informações, entre em contato:
 - E-mail:
-- 
 
 
 ## Links de prototipo
-[Garden Hub 1](horta-comunitaria-gestao-plena.lovable.app)
-
-[Garden Hub 2](community-garden-manager.lovable.app)
-
-[Garden Hub 3](gardenhub.lovable.app)
+Garden Hub 1: horta-comunitaria-gestao-plena.lovable.app
+Garden Hub 2: community-garden-manager.lovable.app
+Garden Hub 3: gardenhub.lovable.app
