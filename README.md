@@ -1,5 +1,5 @@
 
-# Garden Share
+# Cultive
 
 ## Descrição do Projeto
 Garden Share é uma iniciativa de horta comunitária que visa promover a agricultura urbana sustentável e o envolvimento da comunidade. O projeto oferece um espaço para os membros da comunidade cultivarem suas próprias plantas, compartilharem conhecimentos e colhimentos, e fortalecerem os laços sociais.
