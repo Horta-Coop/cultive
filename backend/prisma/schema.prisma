@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EUser {
+  ADMIN
+  GERENTE
+  FAMILIA
+}
+
+enum EHorta {
+  Escolar
+  Comunitaria
+  Institucional
+  ONG
+}
+
+model Teste {
+  id String @id @default(uuid())
+  nome String
+  descricao String?
+  telefone String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Usuario {
+  id String @id @default(uuid())
+  email String @unique
+  senha_hash String
+  tipo EUser
+  foto String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  familia Familia[]
+  gerente Gerente[]
+  admin Admin[]
+}
+
+model Familia {
+  id String @id
+  nome_familia String
+  representante String
+  telefone String
+  habilidades String
+  qtd_membros Int
+  observacoes String?
+  data_adesao DateTime @default(now())
+  on_boarding Boolean
+
+  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  colheita Colheita[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Gerente {
+  id String @id
+  nome_completo String
+  entidade_responsavel String
+  cargo String
+  telefone String
+  observacoes String
+  data_adesao DateTime @default(now())
+  on_boarding Boolean
+
+  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model Admin {
+  id String @id
+  nome_completo String
+  cargo String
+  ativo String
+  observacoes String?
+  data_adesao DateTime @default(now())
+  on_boarding Boolean
+
+  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Horta {
+  id String @id @default(uuid())
+  nome String
+  endereco String
+  cordenadas_gps String
+  area_cultivada Decimal
+  tipo_solo String
+  tipo_horta EHorta
+  observacoes String?
+
+  plantio Plantio[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Plantio {
+  id String @id @default(uuid())
+  cultura String
+  tipo_plantacao String
+  data_plantio DateTime @default(now())
+  previsao_colheita DateTime
+  tipo_manejo String
+  hortaId String
+  horta Horta @relation(fields: [hortaId], references: [id], onDelete: Cascade)
+  quantidade_plantada Decimal
+  unidade String
+  observacoes String?
+  colheita Colheita[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Colheita {
+  id String @id @default(uuid())
+  cultura String
+  plantioId String
+  plantio Plantio @relation(fields: [plantioId], references: [id], onDelete: Cascade)
+  data_colheita DateTime @default(now())
+  quantidade_colhida Decimal
+  unidade String
+  destino String
+  familiaId String
+  familia Familia @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  observacoes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
