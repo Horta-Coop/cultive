@@ -8,6 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 enum EUser {
   ADMIN
   GERENTE
@@ -31,7 +32,7 @@ model Teste {
 }
 
 model Usuario {
-  id String @id @default(uuid())
+  id String @id @default(uuid()) @unique
   email String @unique
   senha_hash String
   tipo EUser
@@ -39,13 +40,13 @@ model Usuario {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  familia Familia[]
-  gerente Gerente[]
-  admin Admin[]
+  familia Familia?
+  gerente Gerente?
+  admin Admin?
 }
 
 model Familia {
-  id String @id
+  id String @id @unique
   nome_familia String
   representante String
   telefone String
@@ -63,7 +64,7 @@ model Familia {
 }
 
 model Gerente {
-  id String @id
+  id String @id @unique
   nome_completo String
   entidade_responsavel String
   cargo String
@@ -76,7 +77,7 @@ model Gerente {
 }
 
 model Admin {
-  id String @id
+  id String @id @unique
   nome_completo String
   cargo String
   ativo String
@@ -116,7 +117,7 @@ model Plantio {
   quantidade_plantada Decimal
   unidade String
   observacoes String?
-  colheita Colheita[]
+  colheita Colheita?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -124,7 +125,7 @@ model Plantio {
 model Colheita {
   id String @id @default(uuid())
   cultura String
-  plantioId String
+  plantioId String @unique
   plantio Plantio @relation(fields: [plantioId], references: [id], onDelete: Cascade)
   data_colheita DateTime @default(now())
   quantidade_colhida Decimal
@@ -136,4 +137,3 @@ model Colheita {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-

@@ -5,6 +5,8 @@ import cors from "cors";
 import dotenv from "dotenv"
 
 import authRoutes from "./routes/auth.route.js"
+import prisma from "./utils/prisma.js";
+
 
 const server = express();
 const PORT = process.env.PORT || 8080;
@@ -12,6 +14,7 @@ dotenv.config()
 
 server.use(cors());
 server.use(helmet());
+server.use(express.json())
 
 server.use("/api/auth", authRoutes)
 
