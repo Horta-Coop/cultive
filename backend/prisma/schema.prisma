@@ -58,6 +58,7 @@ model Familia {
 
   usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
 
+  horta Horta[]
   colheita Colheita[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -101,6 +102,9 @@ model Horta {
   observacoes String?
 
   plantio Plantio[]
+
+  idFamilia String
+  familia Familia @relation(fields: [idFamilia], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
