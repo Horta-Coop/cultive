@@ -59,7 +59,7 @@ export const signup = async (req, res) => {
     const user = await prisma.usuario.create({
       data: {
         email: email,
-        senha_hash: has_senha,
+        senhaHash: has_senha,
         tipo: tipo,
       },
     });
@@ -92,7 +92,7 @@ export const login = async (req, res) => {
         email: email,
       },
     });
-    const isMatch = await bcrypt.compare(senha, userBase.senha_hash);
+    const isMatch = await bcrypt.compare(senha, userBase.senhaHash);
 
     if (!userBase) {
       return res.status(400).json({ message: "User not already" });

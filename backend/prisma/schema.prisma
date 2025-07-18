@@ -8,7 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum EUser {
   ADMIN
   GERENTE
@@ -16,128 +15,126 @@ enum EUser {
 }
 
 enum EHorta {
-  Escolar
-  Comunitaria
-  Institucional
+  ESCOLAR
+  COMUNITARIA
+  INSTITUCIONAL
   ONG
 }
 
 model Teste {
-  id String @id @default(uuid())
-  nome String
+  id        String   @id @default(uuid())
+  nome      String
   descricao String?
-  telefone String?
+  telefone  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Usuario {
-  id String @id @default(uuid()) @unique
-  email String @unique
-  senha_hash String
-  tipo EUser
-  foto String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String  @id @unique @default(uuid())
+  nomeCompleto String?
+  email        String  @unique
+  senhaHash    String
+  foto         String?
+  telefone     String?
+  tipo         EUser
+  onBoarding   Boolean @default(false)
+
+  dataAdesao DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   familia Familia?
   gerente Gerente?
-  admin Admin?
+  admin   Admin?
 }
 
 model Familia {
-  id String @id @unique
-  nome_familia String
+  familiaId     String   @id @unique
+  nomeGrupo     String
   representante String
-  telefone String
-  habilidades String
-  qtd_membros Int
-  observacoes String?
-  data_adesao DateTime @default(now())
-  on_boarding Boolean
-
-  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+  habilidades   String?
+  qtdMembros    Int
+  gerenteId     String
+  observacoes   String?
+  dataAdesao    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   horta Horta[]
-  colheita Colheita[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [familiaId], references: [id], onDelete: Cascade)
+  gerente Gerente @relation(fields: [gerenteId], references: [gerenteId])
 }
 
 model Gerente {
-  id String @id @unique
-  nome_completo String
-  entidade_responsavel String
-  cargo String
-  telefone String
-  observacoes String
-  data_adesao DateTime @default(now())
-  on_boarding Boolean
+  gerenteId           String   @id @unique
+  cargo               String
+  entidadeResponsavel String //Nome da ONG/Grupo/ ou Iniciativa responsavel
+  observacoes         String?
+  data_adesao         DateTime @default(now())
 
-  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
+  usuario Usuario   @relation(fields: [gerenteId], references: [id], onDelete: Cascade)
+  familia Familia[]
 }
 
 model Admin {
-  id String @id @unique
-  nome_completo String
-  cargo String
-  ativo String
+  adminId     String   @id @unique
+  cargo       String
+  ativo       Boolean
   observacoes String?
-  data_adesao DateTime @default(now())
-  on_boarding Boolean
+  dataAdesao  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  usuario Usuario @relation(fields: [id], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  usuario Usuario @relation(fields: [adminId], references: [id], onDelete: Cascade)
 }
 
 model Horta {
-  id String @id @default(uuid())
-  nome String
-  endereco String
-  cordenadas_gps String
-  area_cultivada Decimal
-  tipo_solo String
-  tipo_horta EHorta
-  observacoes String?
+  hortaId           String   @id @default(uuid())
+  nomeHorta         String
+  enderecoHorta     String
+  cordenadaGpsHorta String
+  areaCultivada     Decimal
+  tipoSolo          String
+  tipoHorta         EHorta
+  observacoes       String?
+  familiaId         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   plantio Plantio[]
-
-  idFamilia String
-  familia Familia @relation(fields: [idFamilia], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  familia Familia   @relation(fields: [familiaId], references: [familiaId], onDelete: Cascade)
 }
 
 model Plantio {
-  id String @id @default(uuid())
-  cultura String
-  tipo_plantacao String
-  data_plantio DateTime @default(now())
-  previsao_colheita DateTime
-  tipo_manejo String
-  hortaId String
-  horta Horta @relation(fields: [hortaId], references: [id], onDelete: Cascade)
-  quantidade_plantada Decimal
-  unidade String
-  observacoes String?
+  plantioId          String   @id @default(uuid())
+  culturaPlantio     String
+  tipoPlantacao      String
+  dataPlantio        DateTime @default(now())
+  previsaoColheita   DateTime
+  tipoManejo         String
+  quantidadePlantada Decimal
+  unidadeMedida      String
+  observacoes        String?
+  hortaId            String
+  colheitaId         String?  @unique // chave estrangeira opcional para relação 1-1
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  horta    Horta     @relation(fields: [hortaId], references: [hortaId], onDelete: Cascade)
   colheita Colheita?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Colheita {
-  id String @id @default(uuid())
-  cultura String
-  plantioId String @unique
-  plantio Plantio @relation(fields: [plantioId], references: [id], onDelete: Cascade)
-  data_colheita DateTime @default(now())
-  quantidade_colhida Decimal
-  unidade String
-  destino String
-  familiaId String
-  familia Familia @relation(fields: [familiaId], references: [id], onDelete: Cascade)
-  observacoes String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  colheitaId        String   @id @default(uuid())
+  culturaColheita   String
+  dataColheita      DateTime @default(now())
+  quantidadeColhida Decimal
+  unidadeMedida     String
+  destinoColheita   String
+  plantioId         String   @unique
+  familiaId         String?
+  observacoes       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  plantio Plantio @relation(fields: [plantioId], references: [plantioId], onDelete: Cascade)
 }
