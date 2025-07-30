@@ -6,6 +6,8 @@ import { adminRoute, gerenteRoute, protectRoute } from "../middleware/auth.middl
 const router = express.Router()
 
 router.get("/", protectRoute, getAllHortas)
+//router.get("/:id", protectRoute, getHortaById)
+router.post("/", protectRoute, gerenteRoute || adminRoute, createHorta)
 
 
 export default router

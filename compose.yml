@@ -1,0 +1,30 @@
+services:
+  frontend:
+    build:
+      context:  ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:${FRONTEND_PORT}"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - REACT_APP_BACKEND_URL=http://localhost:${BACKEND_PORT}
+      - PORT=${FRONTEND_PORT}
+    depends_on:
+      - backend
+    networks:
+      - app-net
+  
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:${BACKEND_PORT}"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - DB_USER=${POSTGRES_USER}
+    
