@@ -103,7 +103,7 @@ model PerfilCultivador {
 }
 
 model PerfilAdmin {
-  id          String  @id @unique
+   id          String  @id @default(uuid())  // <== adicione @default(uuid())
   cargo       String
   ativo       Boolean
   observacoes String?
