@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import prisma from "../utils/prisma.js";
+import { UserRepository } from "../repositories/UserRepository.js";
 
 export const protectRoute = async (req, res, next) => {
   try {
@@ -14,16 +14,7 @@ export const protectRoute = async (req, res, next) => {
     try {
       const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
 
-      const user = await prisma.usuario.findUnique({
-        where: {
-          id: decoded.userId,
-        },
-        select: {
-          id: true,
-          email: true,
-          tipo: true,
-        },
-      });
+      const user = UserRepository.findById(decoded.userId);
 
       if (!user) {
         return res.status(401).json({ messgae: "User not found" });
@@ -47,7 +38,7 @@ export const protectRoute = async (req, res, next) => {
 };
 
 export const adminRoute = async (req, res, next) => {
-  if (req.user && req.user.tipo === "ADMIN") {
+  if (req.user && req.user.role === "admin") {
     next();
   } else {
     return res.status(401).json({ message: "Access denied - Admin only" });
@@ -55,7 +46,7 @@ export const adminRoute = async (req, res, next) => {
 };
 
 export const gerenteRoute = async (req, res, next) => {
-  if (req.user && req.user.tipo === "GERENTE") {
+  if (req.user && req.user.role === "gestor") {
     next();
   } else {
     return res.status(401).json({ message: "Access denied - Manager only" });

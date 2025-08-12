@@ -5,9 +5,12 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger.config.js';
+
 import authRoutes from "./routes/auth.route.js";
 import hortaRoutes from "./routes/horta.route.js";
-import prisma from "./utils/prisma.js";
+import prisma from "./config/prisma.js";
 
 const server = express();
 const PORT = process.env.PORT || 8080;
@@ -18,6 +21,7 @@ server.use(helmet());
 server.use(express.json());
 server.use(cookieParser());
 
+server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 server.use("/api/auth", authRoutes);
 server.use("/api/horta", hortaRoutes)
 

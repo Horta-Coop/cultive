@@ -1,44 +1,29 @@
-import prisma from "../utils/prisma.js";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { redis } from "../lib/redis.js";
-import {
-  generateTokens,
-  setCookies,
-  storeRefreshToken,
-} from "../utils/auth.js";
+import { loginSchema, signupSchema } from "../schemas/auth.schema.js";
 
-/*
+import { AuthService } from "../services/AuthService.js";
+import { Jwt } from "../utils/jwt.js";
+
 export const signup = async (req, res) => {
-  const { name, email, senha, tipo } = req.body;
+  const body = req.body;
+  const result = signupSchema.safeParse(body);
+
+  if (!result.success) {
+    const errors = result.error.format();
+    return res.status(422).json({ message: "Erro de validação", errors });
+  }
+
+  const { nome, username, email, senha } = result.data;
 
   try {
-    const has_senha = await bcrypt.hash(senha, 10);
-
-    const userExist = await prisma.usuario.findUnique({
-      where: {
-        email: email,
-      },
+    const { user, accessToken, refreshToken } = await AuthService.signup({
+      nome,
+      username,
+      email,
+      senha,
     });
 
-    if (userExist) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const user = await prisma.usuario.create({
-      data: {
-        nomeCompleto: name,
-        email: email,
-        senhaHash: has_senha,
-        tipo: tipo,
-      },
-    });
-
-    //Autenticate
-    const { accessToken, refreshToken } = generateTokens(user.id);
-    await storeRefreshToken(user.id, refreshToken);
-
-    setCookies(res, accessToken, refreshToken);
+    Jwt.setCookies(res, accessToken, refreshToken);
 
     return res.status(201).json({
       user: {
@@ -49,62 +34,40 @@ export const signup = async (req, res) => {
       message: "Create User",
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 };
-*/
 
 export const login = async (req, res) => {
-  const { email, senha } = req.body;
+  const body = req.body;
+  const result = loginSchema.safeParse(body);
+
+  if (!result.success) {
+    const errors = result.error.format();
+    return res.status(422).json({ message: "Erro de validação", errors });
+  }
+
+  const { username, email, senha } = result.data;
 
   try {
-    const userBase = await prisma.usuario.findUnique({
-      where: {
-        email: email,
-      },
+    const { user, accessToken, refreshToken } = await AuthService.login({
+      username,
+      email,
+      senha,
     });
 
-    if (!userBase) {
-      return res.status(400).json({ message: "User not already" });
-    }
+    Jwt.setCookies(res, accessToken, refreshToken);
 
-    const isMatch = await bcrypt.compare(senha, userBase.senhaHash);
-
-    if (!isMatch) {
-      return res.status(401).json({ messagem: "Invalid credentials" });
-    }
-
-    const { accessToken, refreshToken } = generateTokens(userBase.id);
-    await storeRefreshToken(userBase.id, refreshToken);
-    setCookies(res, accessToken, refreshToken);
-
-    // Busca dados completos
-    let userDetails;
-    if (userBase.tipo === "ADMIN") {
-      userDetails = await prisma.admin.findUnique({
-        where: { adminId: userBase.id },
-      });
-    } else if (userBase.tipo === "GERENTE") {
-      userDetails = await prisma.gerente.findUnique({
-        where: { gerenteId: userBase.id },
-      });
-    } else if (userBase.tipo === "FAMILIA") {
-      userDetails = await prisma.familia.findUnique({
-        where: { familiaId: userBase.id },
-      });
-    }
-
-    return res.json({
+    return res.status(200).json({
       message: "Login bem-sucedido",
       user: {
-        id: userBase.id,
-        email: userBase.email,
-        tipo: userBase.tipo,
-        dados: userDetails,
+        id: user.id,
+        email: user.email,
+        role: user.tipo,
       },
     });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(400).json({ message: error.message });
   }
 };
 

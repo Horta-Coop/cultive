@@ -1,0 +1,13 @@
+cweijan.dbclient-jdbc
+cweijan.vscode-postgresql-client2
+dracula-theme.theme-dracula
+github.codespaces
+github.github-vscode-theme
+github.vscode-pull-request-github
+miguelsolorio.fluent-icons
+miguelsolorio.symbols
+ms-azuretools.vscode-containers
+ms-azuretools.vscode-docker
+ms-ceintl.vscode-language-pack-pt-br
+prisma.prisma
+tal7aouy.theme

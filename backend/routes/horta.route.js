@@ -7,7 +7,7 @@ const router = express.Router()
 
 router.get("/", protectRoute, getAllHortas)
 //router.get("/:id", protectRoute, getHortaById)
-router.post("/", protectRoute, gerenteRoute || adminRoute, createHorta)
+//router.post("/", protectRoute, gerenteRoute || adminRoute, createHorta)
 
 
 export default router
