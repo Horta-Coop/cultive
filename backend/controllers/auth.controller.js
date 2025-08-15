@@ -3,6 +3,7 @@ import { loginSchema, signupSchema } from "../schemas/auth.schema.js";
 
 import { AuthService } from "../services/AuthService.js";
 import { Jwt } from "../utils/jwt.js";
+import jwt from "jsonwebtoken";
 
 export const signup = async (req, res) => {
   const body = req.body;

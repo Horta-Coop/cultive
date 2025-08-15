@@ -10,7 +10,8 @@ import swaggerSpec from './config/swagger.config.js';
 
 import authRoutes from "./routes/auth.route.js";
 import hortaRoutes from "./routes/horta.route.js";
-import prisma from "./config/prisma.js";
+import userRoutes from "./routes/usuario.route.js";
+
 
 const server = express();
 const PORT = process.env.PORT || 8080;
@@ -24,6 +25,7 @@ server.use(cookieParser());
 server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 server.use("/api/auth", authRoutes);
 server.use("/api/horta", hortaRoutes)
+server.use("/api/users", userRoutes)
 
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

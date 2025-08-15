@@ -1,4 +1,4 @@
-import prisma from "../config/prisma";
+import { UserService } from "../services/UserService.js";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -6,7 +6,7 @@ export const getAllUsers = async (req, res) => {
       return res.status(401).json({ message: "Acesso Negado" });
     }
 
-    const usuarios = await prisma.usuario.findMany({});
+    const usuarios = await UserService.getAllUsers();
 
     res.json({ message: "Usuarios", usuarios });
   } catch (error) {
@@ -14,6 +14,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+/*
 export const getUser = async (req, res) => {
   const { id } = req.params;
   try {
@@ -34,8 +35,8 @@ export const getUser = async (req, res) => {
     }
 
     const includePerfil = {
-      [perfil]: true
-    }
+      [perfil]: true,
+    };
 
     const usuario = await prisma.usuario.findUnique({
       where: {
@@ -95,7 +96,6 @@ export const updateUser = async (req, res) => {
       },
     });
 
-
     res.json({ message: "Usuario", usuario });
   } catch (error) {
     return res.status(500).json({ message: error.message });
@@ -103,7 +103,7 @@ export const updateUser = async (req, res) => {
 };
 
 export const deleteUser = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
   try {
     const usuario = await prisma.usuario.findUnique({
       where: {
@@ -118,10 +118,10 @@ export const deleteUser = async (req, res) => {
     await prisma.usuario.delete({
       where: {
         id: id,
-      }
+      },
     });
 
-    res.json({ message: "Usuario deltado"});
+    res.json({ message: "Usuario deltado" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -129,7 +129,6 @@ export const deleteUser = async (req, res) => {
 
 export const me = async (req, res) => {
   try {
-
     const perfil = "";
     switch (req.user.role) {
       case "admin":
@@ -147,8 +146,8 @@ export const me = async (req, res) => {
     }
 
     const includePerfil = {
-      [perfil]: true
-    }
+      [perfil]: true,
+    };
 
     const usuario = await prisma.usuario.findUnique({
       where: {
@@ -166,3 +165,4 @@ export const me = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+*/

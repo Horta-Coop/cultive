@@ -18,6 +18,7 @@ export const UserRepository = {
       },
     });
   },
+
   findByUsernameOrEmail: async ({ email, username }) => {
     return await prisma.usuario.findFirst({
       where: {
@@ -25,4 +26,8 @@ export const UserRepository = {
       },
     });
   },
+
+  findAll: async (options = {}) => {
+    return await prisma.usuario.findMany(options);
+  }
 };

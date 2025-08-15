@@ -74,7 +74,7 @@
 /**
  * @swagger
  * /auth/logout:
- *   post:
+ *   get:
  *     summary: Faz logout e invalida o token
  *     tags: [Auth]
  *     responses:
