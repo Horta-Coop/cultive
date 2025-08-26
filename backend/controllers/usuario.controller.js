@@ -2,11 +2,11 @@ import { UserService } from "../services/UserService.js";
 
 export const getAllUsers = async (req, res) => {
   try {
-    if (!req.user.role === "admin") {
+    if (!req.user.role === "admin" && !req.user.role === "gestor") {
       return res.status(401).json({ message: "Acesso Negado" });
     }
 
-    const usuarios = await UserService.getAllUsers({requester: req.user});
+    const usuarios = await UserService.getAllUsers({ requester: req.user });
 
     res.json({ message: "Usuarios", usuarios });
   } catch (error) {
@@ -18,14 +18,11 @@ export const getUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    let usuario = {};
-    if (req.user.role === "admin") {
-      usuario = await UserService.getUserAdmin(id);
+    if (!req.user.role === "admin" && !req.user.role === "gestor") {
+      return res.status(401).json({ message: "Acesso Negado" });
     }
-
-    if (req.user.role === "gestor") {
-      usuario = await UserService.getUserGestor(id, req.user.id);
-    }
+    
+    const usuario = await UserService.getUser({userId: id, requester: req.user});
 
     res.json({ message: "Usuario", usuario });
   } catch (error) {

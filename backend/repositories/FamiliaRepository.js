@@ -14,7 +14,7 @@ export const FamiliaRepository = {
     });
   },
 
-  findByGestor: async (gestorId) => {
+  findFamilyByGestor: async (gestorId) => {
     return await prisma.familia.findMany({
       where: { gestorId },
       select: {

@@ -1,3 +1,4 @@
+import { FamiliaRepository } from "../repositories/FamiliaRepository.js";
 import { UserRepository } from "../repositories/UserRepository.js";
 
 export const UserService = {
@@ -35,8 +36,9 @@ export const UserService = {
     }
 
     let usuarios = [];
+
     if (requester.role === "gestor") {
-      usuarios = await UserRepository.findAllByGestor(requester.id);
+      usuarios = await UserRepository.findAllUsersByGestor(requester.id);
     }
 
     if (requester.role === "admin") {
@@ -56,26 +58,35 @@ export const UserService = {
     return safeUsuarios;
   },
 
-  getUserAdmin: async (id) => {
-    const usuario = await UserRepository.findById(id);
+  getUser: async (params = {}) => {
+    const {
+      userId,
+      requester, // usuário que está pedindo a listagem (para controle de acesso)
+    } = params;
 
-    if (!usuario || !usuario.length) {
-      throw new Error("Usuário não encontrado");
+    let usuario;
+    if(userId === requester.id) {
+      throw new Error("Usuário nao pode ver o proprio perfil");
     }
 
-    return usuario;
-  },
+    if (requester.role === "gestor") {
+      const familias = await FamiliaRepository.findFamilyByGestor(requester.id);
+      const users = familias.map((f) => f.membros).flat();
 
-  getUserGestor: async (id, gestorId) => {
-    const usuario = await UserRepository.findByGestor(id, gestorId);
+      if (!userId in users) {
+        throw new Error("Usuário não pertence ao gestor");
+      }
 
-    if (!usuario || !usuario.length) {
-      throw new Error(
-        "Usuário não encontrado ou você não tem permissão para acessá-lo"
-      );
+      usuario = await UserRepository.findById(userId);
     }
 
-    return usuario;
+    if (requester.role === "admin") {
+      usuario = await UserRepository.findById(userId);
+    }
+
+    const { password, ...safeUsuario } = usuario;
+
+    return safeUsuario;
   },
 
   updateUserAdmin: async (userId, data) => {
