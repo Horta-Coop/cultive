@@ -1,4 +1,5 @@
-import prisma from "../config/prisma.js";
+import { prisma, prismaLogin } from "../config/prisma.js";
+import { FamiliaRepository } from "./FamiliaRepository.js";
 
 export const UserRepository = {
   findByEmail: async (email) => {
@@ -7,6 +8,12 @@ export const UserRepository = {
 
   createUser: async ({ nome, username, email, senhaHash }) => {
     return await prisma.usuario.create({
+      data: { nome, username, email, senhaHash },
+    });
+  },
+
+  updateUserAdmin: async ({ nome, username, email, senhaHash }) => {
+    return await prisma.usuario.update({
       data: { nome, username, email, senhaHash },
     });
   },
@@ -27,7 +34,33 @@ export const UserRepository = {
     });
   },
 
+  findByUsernameOrEmailWithPassword: async ({ email, username }) => {
+    return await prismaLogin.usuario.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
+    });
+  },
+
   findAll: async (options = {}) => {
     return await prisma.usuario.findMany(options);
-  }
+  },
+
+  findByGestor: async (userId, gestorId) => {
+    const familias = await FamiliaRepository.findByGestor(gestorId);
+    const familiaIds = familias.map((f) => f.id);
+
+    return await prisma.usuario.findUnique({
+      where: { id: userId, familiaId: { in: familiaIds } },
+    });
+  },
+
+  findAllByGestor: async (gestorId) => {
+    const familias = await FamiliaRepository.findByGestor(gestorId);
+    const familiaIds = familias.map((f) => f.id);
+
+    return await prisma.usuario.findMany({
+      where: { familiaId: { in: familiaIds } },
+    });
+  },
 };

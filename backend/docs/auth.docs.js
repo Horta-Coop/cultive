@@ -73,7 +73,7 @@
 
 /**
  * @swagger
- * /auth/logout:
+ * /api/auth/logout:
  *   get:
  *     summary: Faz logout e invalida o token
  *     tags: [Auth]

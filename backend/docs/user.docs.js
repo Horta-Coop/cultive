@@ -83,3 +83,49 @@
  *       500:
  *         description: Erro interno no servidor
  */
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   get:
+ *     summary: Retorna um usuário específico pelo ID
+ *     tags: [Usuários]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário
+ *     responses:
+ *       200:
+ *         description: Usuário encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Usuário encontrado
+ *                 usuario:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: 64f0c3a5e6b29d9f1a7c4a91
+ *                     nome:
+ *                       type: string
+ *                       example: João da Silva
+ *                     email:
+ *                       type: string
+ *                       example: joao@email.com
+ *                     role:
+ *                       type: string
+ *                       example: cultivador
+ *       404:
+ *         description: Usuário não encontrado
+ *       500:
+ *         description: Erro interno no servidor
+ */

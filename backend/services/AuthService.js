@@ -23,8 +23,8 @@ export const AuthService = {
 
     return { user, accessToken, refreshToken };
   },
-  login: async ({ email, username, senha }) => {
-    const user = await UserRepository.findByUsernameOrEmail({
+  login: async ({ username, email, senha }) => {
+    const user = await UserRepository.findByUsernameOrEmailWithPassword({
       email,
       username,
     });

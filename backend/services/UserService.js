@@ -12,17 +12,9 @@ export const UserService = {
       requester, // usuário que está pedindo a listagem (para controle de acesso)
     } = params;
 
-    // 1. Controle de acesso (exemplo futuro)
-    // if (requester.role !== "admin") {
-    //   throw new Error("Acesso negado");
-    // }
-
-    // 2. Filtros iniciais
     const filters = {};
     if (role) filters.role = role;
-    // if (requester.role === "gestor") filters.hortaId = requester.hortaId;
 
-    // 3. Busca por nome/email (like)
     if (search) {
       filters.OR = [
         { name: { contains: search, mode: "insensitive" } },
@@ -30,7 +22,6 @@ export const UserService = {
       ];
     }
 
-    // 4. Paginação
     const take = limit ? parseInt(limit, 10) : undefined;
     const skip =
       page && limit
@@ -43,26 +34,57 @@ export const UserService = {
       order[orderBy] = sortDir || "asc";
     }
 
-    // 6. Chamar repository
-    const usuarios = await UserRepository.findAll({
-      where: filters,
-      take,
-      skip,
-      orderBy: Object.keys(order).length ? order : undefined,
-    });
+    let usuarios = [];
+    if (requester.role === "gestor") {
+      usuarios = await UserRepository.findAllByGestor(requester.id);
+    }
 
-    // 7. Ocultar campos sensíveis
+    if (requester.role === "admin") {
+      usuarios = await UserRepository.findAll({
+        where: filters,
+        take,
+        skip,
+        orderBy: Object.keys(order).length ? order : undefined,
+      });
+    }
+
     const safeUsuarios = usuarios.map((u) => {
       const { password, ...safeData } = u;
       return safeData;
     });
 
-    // 8. (Futuro) Cache
-    // await cache.set("usuarios", safeUsuarios);
-
-    // 9. (Futuro) Auditoria
-    // await auditoriaService.registrar(requester.id, "LIST_USERS");
-
     return safeUsuarios;
+  },
+
+  getUserAdmin: async (id) => {
+    const usuario = await UserRepository.findById(id);
+
+    if (!usuario || !usuario.length) {
+      throw new Error("Usuário não encontrado");
+    }
+
+    return usuario;
+  },
+
+  getUserGestor: async (id, gestorId) => {
+    const usuario = await UserRepository.findByGestor(id, gestorId);
+
+    if (!usuario || !usuario.length) {
+      throw new Error(
+        "Usuário não encontrado ou você não tem permissão para acessá-lo"
+      );
+    }
+
+    return usuario;
+  },
+
+  updateUserAdmin: async (userId, data) => {
+    const userExist = await UserRepository.findById(userId);
+
+    if (userExist) {
+      throw new Error("User already exists");
+    }
+
+    return await UserRepository.updateUserAdmin(id, data);
   },
 };

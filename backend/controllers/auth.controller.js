@@ -51,6 +51,15 @@ export const login = async (req, res) => {
   const { username, email, senha } = result.data;
 
   try {
+    const token = req.cookies["accessToken"];
+
+    if (token) {
+      const payload = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+      if (payload) {
+        throw new Error("User already logged in");
+      }
+    }
+
     const { user, accessToken, refreshToken } = await AuthService.login({
       username,
       email,
@@ -75,6 +84,7 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+
     if (refreshToken) {
       const decoded = jwt.verify(
         refreshToken,
@@ -85,6 +95,7 @@ export const logout = async (req, res) => {
 
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
+
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -125,6 +136,3 @@ export const refreshToken = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-// TODO:
-//export const getProfile = async (req, res) => {};

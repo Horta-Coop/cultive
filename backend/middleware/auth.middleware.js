@@ -14,7 +14,7 @@ export const protectRoute = async (req, res, next) => {
     try {
       const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
 
-      const user = UserRepository.findById(decoded.userId);
+      const user = await UserRepository.findById(decoded.userId);
 
       if (!user) {
         return res.status(401).json({ messgae: "User not found" });
@@ -37,18 +37,13 @@ export const protectRoute = async (req, res, next) => {
   }
 };
 
-export const adminRoute = async (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
+// Middleware genérico para permitir múltiplos roles
+export const allowRoles = (...roles) => {
+  return (req, res, next) => {
+    const userRole = req.user?.role;
+    if (!userRole || !roles.includes(userRole)) {
+      return res.status(403).json({ message: "Access denied" });
+    }
     next();
-  } else {
-    return res.status(401).json({ message: "Access denied - Admin only" });
-  }
-};
-
-export const gerenteRoute = async (req, res, next) => {
-  if (req.user && req.user.role === "gestor") {
-    next();
-  } else {
-    return res.status(401).json({ message: "Access denied - Manager only" });
-  }
+  };
 };
