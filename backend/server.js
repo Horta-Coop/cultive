@@ -18,6 +18,10 @@ const PORT = process.env.PORT || 8080;
 dotenv.config();
 
 server.use(cors());
+server.use(cors({
+  origin: 'https://scaling-umbrella-p44jxqp7wxrf94gj-5173.app.github.dev',
+  credentials: true,
+}));
 server.use(helmet());
 server.use(express.json());
 server.use(cookieParser());

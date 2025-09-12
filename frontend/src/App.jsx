@@ -6,10 +6,11 @@ import Navbar from "./components/Navbar";
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-900 relative overflow-hidden" data-theme="lemonade">
 
       <Navbar />
-      <div className="relative z-50 pt-20">
+      
+      <div className="">
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/signup" element={<SignupPage />} />
