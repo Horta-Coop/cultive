@@ -14,16 +14,15 @@ import userRoutes from "./routes/usuario.route.js";
 
 
 const server = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5000;
 dotenv.config();
 
-server.use(cors());
+//server.use(helmet());
 server.use(cors({
-  origin: 'https://scaling-umbrella-p44jxqp7wxrf94gj-5173.app.github.dev',
-  credentials: true,
+  origin: 'http://localhost:5173', // ajuste para a porta do seu frontend
+  credentials: true
 }));
-server.use(helmet());
-server.use(express.json());
+server.use(express.json({ limit: "10mb" }));
 server.use(cookieParser());
 
 server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

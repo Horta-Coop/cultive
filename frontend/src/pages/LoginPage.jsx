@@ -4,19 +4,22 @@ import {
   Lock, 
   LogIn, 
   Github,
-  User 
+  User, 
+  Loader
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useUserStore } from '../stores/useUserStore';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false)
+
+  const { login, loading } = useUserStore()
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Lógica de login aqui
-    console.log('Login attempt:', { username, password, rememberMe });
+    login(username, password );
   };
 
   return (
@@ -87,9 +90,14 @@ const LoginPage = () => {
               </div>
 
               {/* Botão de login */}
-              <button type="submit" className="btn btn-primary w-full">
+              <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+                {loading ? (<>
+                <Loader className="mr-2 h-5 w-5 animate-spin" aria-hidden="true"/>
+                Entrando...
+                </>): (<>
                 <LogIn className="h-4 w-4 mr-2" />
                 Entrar
+                </>)}
               </button>
             </form>
           </div>

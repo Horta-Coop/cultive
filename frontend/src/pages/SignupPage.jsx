@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { useUserStore } from "../stores/useUserStore";
-import { Lock, LogIn, Mail, User } from "lucide-react";
+import { Loader, Lock, LogIn, Mail, User } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const SignupPage = () => {
-  //const loading = false;
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -13,7 +12,7 @@ const SignupPage = () => {
     confirmPassword: "",
   });
 
-  const { signup } = useUserStore()
+  const { signup, loading} = useUserStore()
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -157,9 +156,14 @@ const SignupPage = () => {
               </div>
 
               {/* Botão de cadastro */}
-              <button type="submit" className="btn btn-primary w-full">
+              <button type="submit" className="btn btn-primary w-full" disabled={loading}>
+                {loading ? (<>
+                <Loader className="mr-2 h-5 w-5 animate-spin" aria-hidden="true"/>
+                Carregando...
+                </>): (<>
                 <LogIn className="h-4 w-4 mr-2" />
                 Criar conta
+                </>)}
               </button>
             </form>
 

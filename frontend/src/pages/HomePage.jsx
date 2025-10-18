@@ -24,7 +24,7 @@ const HomePage = () => {
                   </div>
                   <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center lg:justify-start">
                     <a
-                      href="/cadastro"
+                      href="/signup"
                       className="btn btn-primary btn-lg gap-1.5"
                     >
                       Comece sua horta comunitária
@@ -388,7 +388,7 @@ const HomePage = () => {
                     ))}
                   </div>
                   <div className="mt-8 text-center lg:text-left">
-                    <a href="/cadastro" className="btn btn-primary">
+                    <a href="/signup" className="btn btn-primary">
                       Comece agora mesmo
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -520,7 +520,7 @@ const HomePage = () => {
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                   <a
-                    href="/cadastro"
+                    href="/signup"
                     className="btn btn-primary btn-lg gap-1.5"
                   >
                     Criar uma conta gratuitamente

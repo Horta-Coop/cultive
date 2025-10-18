@@ -20,7 +20,37 @@ export const useUserStore = create((set, get) => ({
         set({user: res.data.user, loading: false});
     } catch (error) {
         set({ loading: false });
-        toast.error(error.response.data.message || "Erro ao criar conta");
+        toast.error(error?.response?.data?.message || "Erro ao criar conta");
+    }
+  },
+  login: async (username, password) => {
+    set({ loading: true }); 
+
+    try{
+        const res = await axios.post("/auth/login", {username, senha: password});
+        set({user: res.data.user, loading: false});
+    } catch (error) {
+        set({ loading: false });
+        toast.error(error?.response?.data?.message || "Erro ao fazer login");
+    }
+  },
+
+  logout: async () => {
+    try{
+        await axios.get("/auth/logout");
+        set({user: null});
+    } catch (error) {
+        toast.error(error?.response?.data?.message || "Erro ao fazer logout");
+    }
+  },
+
+  checkAuth: async () => {
+    set({ checkinAuth: true });
+    try {
+        const res = await axios.get("/auth/me");
+        set({user: res.data.user, checkinAuth: false});
+    }catch (error) {
+        set({ checkinAuth: false, user: null });
     }
   },
 }));

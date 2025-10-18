@@ -14,6 +14,5 @@ router.delete("/:id", protectRoute, deleteUser)
 //TODO: Create Page Onboarding
 //router.post("/onboarding", protectRoute, onboarding)
 
-//router.post("/me", protectRoute, me)
 
 export default router

@@ -70,11 +70,7 @@ export const login = async (req, res) => {
 
     return res.status(200).json({
       message: "Login bem-sucedido",
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.tipo,
-      },
+      user: user
     });
   } catch (error) {
     return res.status(400).json({ message: error.message });
@@ -99,6 +95,29 @@ export const logout = async (req, res) => {
     res.json({ message: "Logged out successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const me = async (req, res) => {
+  try {
+    const user = req.user; // Obtém o usuário do middleware de autenticação
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      user:{
+      id: user.id,
+      nome: user.nome,
+      username: user.username,  
+      email: user.email,
+      role: user.role,
+      },
+      message: "Profile fetched successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 };
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Navbar = () => {
  const isAuthenticated = false;
@@ -112,9 +113,9 @@ const Navbar = () => {
               <a href="/login" className="btn btn-ghost">
                 Entrar
               </a>
-              <a href="/cadastro" className="btn btn-primary">
+              <Link to="/signup" className="btn btn-primary">
                 Cadastre-se
-              </a>
+              </Link>
             </div>
           </>
         ) : (
@@ -184,7 +185,7 @@ const Navbar = () => {
                   <li><a href="/ajuda">Ajuda</a></li>
                   <li className="menu-title mt-2"><span>Conta</span></li>
                   <li><a href="/login">Entrar</a></li>
-                  <li><a href="/cadastro">Cadastre-se</a></li>
+                  <li><a href="/signup">Cadastre-se</a></li>
                 </>
               ) : isAdmin ? (
                 // Menu mobile para administradores
