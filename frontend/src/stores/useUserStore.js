@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { toast } from "react-hot-toast";
 import axios from "../lib/axios";
 
+// eslint-disable-next-line no-unused-vars
 export const useUserStore = create((set, get) => ({
   user: null,
   loading: false,
@@ -49,6 +50,7 @@ export const useUserStore = create((set, get) => ({
     try {
         const res = await axios.get("/auth/me");
         set({user: res.data.user, checkinAuth: false});
+    // eslint-disable-next-line no-unused-vars
     }catch (error) {
         set({ checkinAuth: false, user: null });
     }

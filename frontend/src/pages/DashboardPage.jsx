@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { 
   Home, 
@@ -7,7 +7,6 @@ import {
   Users, 
   MessageSquare, 
   Bell, 
-  ChevronLeft,
   ArrowRight,
   Plus,
   Sprout,
@@ -16,11 +15,9 @@ import {
   LogOut
 } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore";
-import DashboardSidebar from "../components/DashboardSidebar";
 
 const DashboardPage = () => {
   const { user } = useUserStore();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   // Dados mockados para demonstração
   const recentActivities = [
     {
@@ -51,46 +48,15 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-base-100 flex">
-      <DashboardSidebar 
-        user={user}
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
-
-      {/* Overlay mobile */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black/50 md:hidden" 
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-
       {/* Conteúdo principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-base-100 border-b border-base-300 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center md:hidden">
-              <button 
-                onClick={() => setSidebarOpen(true)}
-                className="btn btn-ghost btn-square"
-              >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  className="h-6 w-6" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-            </div>
-            
+          <div className="flex items-center justify-between">  
             <div className="flex-1 md:flex-none">
               <h1 className="text-xl font-semibold">Dashboard</h1>
             </div>
-
+ 
             <div className="flex items-center space-x-4">
               <div className="dropdown dropdown-end">
                 <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
@@ -109,7 +75,7 @@ const DashboardPage = () => {
             </div>
           </div>
         </header>
-
+ 
         {/* Conteúdo */}
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
@@ -122,7 +88,7 @@ const DashboardPage = () => {
                 Aqui está o resumo da sua horta comunitária
               </p>
             </div>
-
+ 
             {/* Sugestão do Assistente */}
             <div className="alert alert-info mb-8">
               <svg 
@@ -145,7 +111,7 @@ const DashboardPage = () => {
                 </div>
               </div>
             </div>
-
+ 
             {/* Cards do Dashboard */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {/* Card Minha Horta */}
@@ -332,5 +298,5 @@ const DashboardPage = () => {
     </div>
   );
 };
-
+ 
 export default DashboardPage;

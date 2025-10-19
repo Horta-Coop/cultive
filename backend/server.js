@@ -11,6 +11,7 @@ import swaggerSpec from './config/swagger.config.js';
 import authRoutes from "./routes/auth.route.js";
 import hortaRoutes from "./routes/horta.route.js";
 import userRoutes from "./routes/usuario.route.js";
+import plantioRoute from "./routes/plantio.route.js";
 
 
 const server = express();
@@ -29,6 +30,7 @@ server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 server.use("/api/auth", authRoutes);
 server.use("/api/horta", hortaRoutes)
 server.use("/api/users", userRoutes)
+server.use("/api/plantio", plantioRoute)
 
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
