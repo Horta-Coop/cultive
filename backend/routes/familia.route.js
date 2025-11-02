@@ -1,10 +1,22 @@
-import express from "express"
-import { adminRoute, gerenteRoute, protectRoute } from "../middleware/auth.middleware"
+import express from "express";
+import { protectRoute, allowRoles } from "../middleware/auth.middleware.js";
+import {
+  createFamilia,
+  getFamilias,
+  getFamiliaById,
+  updateFamilia,
+  deleteFamilia,
+} from "../controllers/familia.controller.js";
 
+const router = express.Router();
 
-const router = express.Router()
-router.post("/", protectRoute, gerenteRoute || adminRoute, createFamilia)
-router.put("/:userId", protectRoute, updateFamilia)
-router.delete("/:userId", deleteFalimia)
+// list / create
+router.get("/", protectRoute, allowRoles("gestor", "admin"), getFamilias);
+router.post("/", protectRoute, allowRoles("gestor", "admin"), createFamilia);
 
-export default router
+// single
+router.get("/:id", protectRoute, allowRoles("gestor", "admin"), getFamiliaById);
+router.put("/:id", protectRoute, allowRoles("gestor", "admin"), updateFamilia);
+router.delete("/:id", protectRoute, allowRoles("admin"), deleteFamilia);
+
+export default router;

@@ -194,10 +194,12 @@ model Notificacao {
   usuarioId String
   titulo    String
   mensagem  String
-  lida      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  tipo      String?   // opcional: "evento", "aviso", "alerta", etc.
+  lida      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
 }
+
 
 model Log {
   id        String   @id @default(uuid())
@@ -212,9 +214,9 @@ model Faq {
   id        String   @id @default(uuid())
   pergunta  String
   resposta  String
-  categoria String? // Ex: "plantio", "sistema", "comunidade"
-  ordem     Int? // Para controle de exibição ordenada
+  categoria String?      // ex: "plantio", "sistema", "comunidade"
+  ordem     Int?         // Para ordenação
   criadoEm  DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 }
+

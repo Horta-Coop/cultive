@@ -12,7 +12,7 @@ export function usePlantioStore() {
     try {
       const params = {};
       if (opts.hortaId) params.hortaId = opts.hortaId;
-      const res = await axios.get("/api/plantio", { params });
+      const res = await axios.get("/plantio", { params });
       setPlantings(res.data?.plantios ?? []);
       setLoading(false);
       return res.data?.plantios ?? [];

@@ -12,9 +12,10 @@ export const UserRepository = {
     });
   },
 
-  updateUserAdmin: async ({ nome, username, email, senhaHash }) => {
+  updateUserAdmin: async (id, data) => {
     return await prisma.usuario.update({
-      data: { nome, username, email, senhaHash },
+      where: { id },
+      data,
     });
   },
 
@@ -54,5 +55,4 @@ export const UserRepository = {
       where: { familiaId: { in: familiaIds } },
     });
   },
-
 };

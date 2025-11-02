@@ -1,18 +1,24 @@
+import { Check, Leaf, MoveRight } from "lucide-react";
 import React from "react";
+import { Link } from "react-router-dom";
+import Footer from "../components/Footer";
 
 const HomePage = () => {
   return (
     <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 to-base-100 py-20 md:py-32">
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] dark:opacity-[0.025]"></div>
+        {/* Padrão de fundo (Mock) */}
+        <div className="absolute  bg-grid-pattern opacity-[0.05] dark:opacity-[0.025]"></div>
+
         <div className="container px-4 md:px-6 mx-auto">
           <div className="flex justify-center">
             <div className="max-w-6xl w-full">
               <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
-                <div className="flex flex-col justify-center space-y-4">
-                  <div className="space-y-2 text-center lg:text-left">
-                    <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                {/* Coluna de Texto e Ações */}
+                <div className="flex flex-col justify-center space-y-8">
+                  <div className="space-y-4 text-center lg:text-left">
+                    <h1 className="text-3xl font-extrabold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none text-base-content">
                       Cultive comunidade, <br />
                       <span className="text-primary">colha abundância</span>
                     </h1>
@@ -22,85 +28,42 @@ const HomePage = () => {
                       fortaleça laços comunitários.
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 min-[400px]:flex-row justify-center lg:justify-start">
-                    <a
-                      href="/signup"
-                      className="btn btn-primary btn-lg gap-1.5"
+
+                  {/* Botões de Ação (FIX: Uso de <Link> e 'to') */}
+                  <div className="flex flex-col gap-3 min-[400px]:flex-row justify-center lg:justify-start">
+                    <Link
+                      to="/signup"
+                      className="btn btn-primary btn-lg shadow-lg hover:shadow-xl gap-1.5 transition-all duration-300"
                     >
                       Comece sua horta comunitária
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4"
-                      >
-                        <path d="m9 18 6-6-6-6"></path>
-                      </svg>
-                    </a>
-                    <a href="/planos" className="btn btn-outline btn-lg">
+                      <MoveRight size={20} />
+                    </Link>
+
+                    <Link
+                      to="/planos"
+                      className="btn btn-outline btn-lg border-2 hover:bg-base-300 transition-colors duration-300"
+                    >
                       Ver planos
-                    </a>
+                    </Link>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-sm justify-center lg:justify-start">
-                    <div className="flex items-center gap-1">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4 text-primary"
-                      >
-                        <path d="M20 6 9 17l-5-5"></path>
-                      </svg>
+
+                  {/* Destaques de Funcionalidades */}
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-base-content/80 justify-center lg:justify-start pt-4">
+                    <div className="flex items-center gap-1 font-medium">
+                      <Check size={18} className="text-primary" />
                       <span>Planejamento inteligente</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4 text-primary"
-                      >
-                        <path d="M20 6 9 17l-5-5"></path>
-                      </svg>
+                    <div className="flex items-center gap-1 font-medium">
+                      <Check size={18} className="text-primary" />
                       <span>Gestão colaborativa</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-4 w-4 text-primary"
-                      >
-                        <path d="M20 6 9 17l-5-5"></path>
-                      </svg>
+                    <div className="flex items-center gap-1 font-medium">
+                      <Check size={18} className="text-primary" />
                       <span>Distribuição justa</span>
                     </div>
                   </div>
                 </div>
+
                 <div className="relative hidden lg:block">
                   <div className="absolute -left-8 -top-8 h-[calc(100%+4rem)] w-[calc(100%+4rem)] rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 p-8">
                     <div className="h-full w-full overflow-hidden rounded-2xl border bg-base-100 shadow-xl">
@@ -141,21 +104,7 @@ const HomePage = () => {
                 <div className="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
                   <div className="card-body items-center text-center">
                     <div className="p-2 w-16 h-16 flex items-center justify-center rounded-lg bg-primary/10 text-primary mb-3">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-10 w-10 text-primary"
-                      >
-                        <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
-                        <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
-                      </svg>
+                      <Leaf size={35} />
                     </div>
                     <h3 className="card-title text-2xl">Gestão Integrada</h3>
                     <p className="text-base-content/70">
@@ -390,21 +339,7 @@ const HomePage = () => {
                   <div className="mt-8 text-center lg:text-left">
                     <a href="/signup" className="btn btn-primary">
                       Comece agora mesmo
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="极速加速器 0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="ml-2 h-4 w-4"
-                      >
-                        <path d="M5 12h14"></path>
-                        <path d="m12 5 7 7-7 7"></path>
-                      </svg>
+                      <MoveRight />
                     </a>
                   </div>
                 </div>
@@ -519,26 +454,9 @@ const HomePage = () => {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                  <a
-                    href="/signup"
-                    className="btn btn-primary btn-lg gap-1.5"
-                  >
+                  <a href="/signup" className="btn btn-primary btn-lg gap-1.5">
                     Criar uma conta gratuitamente
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="h-4 w-4"
-                    >
-                      <path d="M18 8L22 12L极速加速器 16"></path>
-                      <path d="M2 12H22"></path>
-                    </svg>
+                    <MoveRight />
                   </a>
                   <a href="/sobre" className="btn btn-outline btn-lg">
                     Saiba mais sobre nós
@@ -549,67 +467,7 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="footer footer-center p-10 bg-base-200 text-base-content rounded">
-        <nav className="grid grid-flow-col gap-4">
-          <a href="/sobre" className="link link-hover">
-            Sobre nós
-          </a>
-          <a href="/contato" className="link link-hover">
-            Contato
-          </a>
-          <a href="/planos" className="link link-hover">
-            Planos
-          </a>
-          <a href="/ajuda" className="link link-hover">
-            Ajuda
-          </a>
-        </nav>
-        <nav>
-          <div className="grid grid-flow-col gap-4">
-            <a>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                className="fill-current"
-              >
-                <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"></path>
-              </svg>
-            </a>
-            <a>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                className="fill-current"
-              >
-                <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path>
-              </svg>
-            </a>
-            <a>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                className="fill-current"
-              >
-                <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"></path>
-              </svg>
-            </a>
-          </div>
-        </nav>
-        <aside>
-          <p>
-            Copyright © {new Date().getFullYear()} - Todos os direitos
-            reservados pela Cultive
-          </p>
-        </aside>
-      </footer>
+      <Footer />
     </div>
   );
 };

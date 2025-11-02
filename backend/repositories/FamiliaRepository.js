@@ -31,4 +31,24 @@ export const FamiliaRepository = {
       data: { nome, representante, gestorId, qtdMembros },
     });
   },
+  findAll: async (options = {}) => {
+    return await prisma.familia.findMany({
+      where: options.where ?? {},
+      take: options.take,
+      skip: options.skip,
+      orderBy: options.orderBy,
+      include: options.include ?? { membros: true },
+    });
+  },
+  updateFamilia: async (id, data) => {
+    return await prisma.familia.update({
+      where: { id },
+      data,
+      include: { membros: true },
+    });
+  },
+
+  deleteFamilia: async (id) => {
+    return await prisma.familia.delete({ where: { id } });
+  },
 };

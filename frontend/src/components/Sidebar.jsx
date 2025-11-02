@@ -3,10 +3,7 @@ import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
   Home,
   Globe,
-  Sprout,
-  PieChart,
-  Calendar,
-  Package,
+  Leaf,
   MessageSquare,
   Users,
   Settings,
@@ -14,31 +11,34 @@ import {
   HelpCircle,
   ChevronLeft,
   LogOut,
+  GraduationCap,
+  Wheat,
+  Sprout,
 } from "lucide-react";
+
 import { useUserStore } from "../stores/useUserStore";
 
 const Sidebar = ({ user, isOpen, onToggle }) => {
   const { logout } = useUserStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    // fechar o menu mobile (se houver)
-    if (onToggle) onToggle();
-    // redirecionar para login
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      navigate("/login");
+    }
   };
 
-  // tornar acesso a role seguro e nome consistente
   const role = user?.role ?? "cultivador";
   const displayName = user?.nome || user?.name || "Usuário";
 
   const menuItems = [
     { path: "/dashboard", icon: Home, label: "Dashboard" },
-    { path: "/hortas", icon: Globe, label: "Hortas" },
+    { path: "/hortas", icon: Leaf, label: "Hortas" },
     { path: "/plantios", icon: Sprout, label: "Plantios" },
+    { path: "/colheitas", icon: Wheat, label: "Colheitas" },
     { path: "/comunicacao", icon: MessageSquare, label: "Comunicação" },
-    // Condicionais baseadas na role do usuário
     ...(role === "admin"
       ? [{ path: "/usuarios", icon: Users, label: "Usuários" }]
       : []),
@@ -52,43 +52,29 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
 
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-50 transform md:relative md:translate-x-0 transition-transform duration-300 ease-in-out ${
+      className={`fixed inset-y-0 left-0 z-50 h-full transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
-      } md:flex`}
+      } md:translate-x-0 md:flex`}
     >
-      <div className="flex flex-col bg-base-100 border-r border-base-300 h-full relative transition-all duration-300 ease-in-out w-64">
-        {/* Cabeçalho */}
-        <div className="p-4 border-b border-base-300 flex items-center justify-between">
-          <div className="flex items-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6 text-primary"
-            >
-              <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path>
-              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path>
-            </svg>
-            <span className="ml-2 text-xl font-semibold text-base-content">
-              Cultive
-            </span>
-          </div>
+      {/* O contêiner interno mantém a largura, altura e layout flexbox */}
+      <div className="flex flex-col bg-base-100 border-r border-base-300 h-full relative w-64 shadow-xl">
+        {/* Cabeçalho - Fixo no topo */}
+        <div className="p-4 border-b border-base-300 flex items-center justify-between flex-shrink-0">
+          <Link to="/dashboard" className="flex items-center space-x-2">
+            <Leaf size={28} className="text-primary" />
+            <span className="text-xl font-bold text-base-content">Cultive</span>
+          </Link>
           <button
-            className="p-1 rounded-full hover:bg-base-300 transition-colors md:hidden"
+            className="btn btn-ghost btn-sm p-1 md:hidden"
             onClick={onToggle}
+            aria-label="Toggle Sidebar"
           >
             <ChevronLeft className="h-5 w-5 text-base-content/70" />
           </button>
         </div>
 
-        {/* Navegação */}
-        <div className="py-4 flex-grow overflow-y-auto">
+        {/* Navegação - Elemento que Cresce e Rola (flex-grow + overflow-y-auto) */}
+        <div className="py-2 flex-grow overflow-y-auto">
           <nav className="px-2 space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -96,11 +82,12 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  onClick={onToggle}
                   className={({ isActive }) =>
-                    `flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-base-content/70 hover:bg-base-300 hover:text-base-content"
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-base-content/70 hover:bg-base-200 hover:text-base-content"
                     }`
                   }
                 >
@@ -114,38 +101,39 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
           </nav>
         </div>
 
-        {/* Perfil do usuário */}
-        <div className="p-4 border-t border-base-300">
+        {/* Perfil do usuário / Logout */}
+        <div className="p-4 border-t border-base-300 flex-shrink-0">
           <div className="flex items-center space-x-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-medium">
+            <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg flex-shrink-0">
               {displayName.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-base-content truncate">
                 {displayName}
               </p>
-              <p className="text-xs text-base-content/70 truncate">
+              <p className="text-xs text-base-content/70 truncate capitalize">
                 {role}
               </p>
             </div>
           </div>
 
-          {/* Menu de perfil */}
           <div className="space-y-1">
             <Link
               to="/perfil"
-              className="flex items-center px-3 py-2 text-sm rounded-md text-base-content/70 hover:bg-base-300 transition-colors"
+              onClick={onToggle}
+              className="flex items-center px-3 py-2 text-sm rounded-lg text-base-content/70 hover:bg-base-200 transition-colors"
             >
-              <Settings className="h-4 w-4 mr-3" />
+              <Settings className="h-4 w-4 mr-3 text-base-content/60" />
               Meu Perfil
             </Link>
-            <button
+            <Link
+              to=""
               onClick={handleLogout}
-              className="flex items-center w-full px-3 py-2 text-sm rounded-md text-error hover:bg-base-300 transition-colors"
+              className="flex items-center w-full px-3 py-2 text-sm rounded-lg text-error hover:bg-error/10 transition-colors"
             >
               <LogOut className="h-4 w-4 mr-3" />
               Sair
-            </button>
+            </Link>
           </div>
         </div>
       </div>

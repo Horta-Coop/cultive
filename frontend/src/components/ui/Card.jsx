@@ -1,78 +1,43 @@
-import {cn} from "../../lib/utils";
-import { forwardRef } from "react";
+// Card.jsx
+const Card = ({ children, className = "" }) => (
+  <div
+    className={`card bg-base-100 shadow-xl border border-base-300 rounded-2xl ${className}`}
+  >
+    {children}
+  </div>
+);
 
-const Card = forwardRef(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn(
-        "rounded-lg border bg-card text-card-foreground shadow-sm",
-        className
-      )}
-      {...props}
-    />
-  );
-});
-Card.displayName = "Card";
+const CardHeader = ({ children, className = "" }) => (
+  <div className={`card-body pb-2 ${className}`}>{children}</div>
+);
 
-const CardHeader = forwardRef(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
-      {...props}
-    />
-  );
-});
-CardHeader.displayName = "CardHeader";
+const CardTitle = ({ children, className = "" }) => (
+  <h2
+    className={`card-title text-base-content text-xl font-semibold ${className}`}
+  >
+    {children}
+  </h2>
+);
 
-const CardTitle = forwardRef(({ className, ...props }, ref) => {
-  return (
-    <h3
-      ref={ref}
-      className={cn(
-      "text-2xl font-semibold leading-none tracking-tight",
-      className
-    )}
-      {...props}
-    />
-  );
-});
-CardTitle.displayName = "CardTitle";
+const CardDescription = ({ children, className = "" }) => (
+  <p className={`text-base-content/70 text-sm ${className}`}>{children}</p>
+);
 
-const CardDescription = forwardRef(({ className, ...props }, ref) => {
-  return (
-    <p
-      ref={ref}
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  );
-});
+const CardContent = ({ children, className = "" }) => (
+  <div className={`card-body pt-0 ${className}`}>{children}</div>
+);
 
-CardDescription.displayName = "CardDescription";
+const CardFooter = ({ children, className = "" }) => (
+  <div className={`card-actions p-6 pt-0 flex items-center ${className}`}>
+    {children}
+  </div>
+);
 
-
-const CardContent = forwardRef(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("p-6 pt-0", className)}
-      {...props}
-    />
-  );
-});
-CardContent.displayName = "CardContent";
-
-const CardFooter = forwardRef(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("flex items-center p-6 pt-0", className)}
-      {...props}
-    />
-  );
-});
-CardFooter.displayName = "CardFooter";
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+};

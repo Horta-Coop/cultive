@@ -7,11 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/DropMenu";
 
-export function FloatingActionButton({
-  onNewPlot,
-  onNewTask,
-  onNewHarvest,
-}) {
+export function FloatingActionButton({ onNewPlot, onNewTask, onNewHarvest }) {
   return (
     <>
       {/* Botão de Ação Principal (Menu Flutuante) */}
@@ -19,7 +15,7 @@ export function FloatingActionButton({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              className="bg-accent hover:bg-accent-dark text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-colors"
+              className="btn-accent text-accent-content rounded-full w-14 h-14 flex items-center justify-center shadow-lg transition-colors"
               size="icon"
             >
               <Plus className="h-6 w-6" />
@@ -27,10 +23,7 @@ export function FloatingActionButton({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             {onNewPlot && (
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={onNewPlot}
-              >
+              <DropdownMenuItem className="cursor-pointer" onClick={onNewPlot}>
                 <div className="flex items-center">
                   <span className="mr-2">🌱</span>
                   <span>Novo Canteiro</span>
@@ -38,10 +31,7 @@ export function FloatingActionButton({
               </DropdownMenuItem>
             )}
             {onNewTask && (
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onClick={onNewTask}
-              >
+              <DropdownMenuItem className="cursor-pointer" onClick={onNewTask}>
                 <div className="flex items-center">
                   <span className="mr-2">📝</span>
                   <span>Nova Tarefa</span>
@@ -66,7 +56,7 @@ export function FloatingActionButton({
       {/* Botão do Assistente IA */}
       <div className="fixed left-6 bottom-20 md:bottom-6 z-20">
         <Button
-          className="bg-primary hover:bg-primary-dark text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg transition-colors"
+          className="btn-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center shadow-lg transition-colors"
           size="icon"
         >
           <Lightbulb className="h-6 w-6" />

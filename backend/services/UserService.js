@@ -65,37 +65,55 @@ export const UserService = {
     } = params;
 
     let usuario;
-    if(userId === requester.id) {
-      throw new Error("Usuário nao pode ver o proprio perfil");
-    }
-
-    if (requester.role === "gestor") {
-      const familias = await FamiliaRepository.findFamilyByGestor(requester.id);
-      const users = familias.map((f) => f.membros).flat();
-
-      if (!userId in users) {
-        throw new Error("Usuário não pertence ao gestor");
-      }
-
-      usuario = await UserRepository.findById(userId);
-    }
-
+    // allow admin to fetch any user
     if (requester.role === "admin") {
       usuario = await UserRepository.findById(userId);
+      if (!usuario) throw new Error("Usuário não encontrado");
+      const { password, ...safeUsuario } = usuario;
+      return safeUsuario;
     }
 
-    const { password, ...safeUsuario } = usuario;
+    // allow user to fetch own profile
+    if (userId === requester.id) {
+      usuario = await UserRepository.findById(userId);
+      if (!usuario) throw new Error("Usuário não encontrado");
+      const { password, ...safeUsuario } = usuario;
+      return safeUsuario;
+    }
 
-    return safeUsuario;
+    // gestor can fetch users that belong to families he manages
+    if (requester.role === "gestor") {
+      const familias = await FamiliaRepository.findFamilyByGestor(requester.id);
+      const members = familias.map((f) => f.membros).flat();
+      const belongs = members.some((m) => m.id === userId);
+      if (!belongs) throw new Error("Usuário não pertence ao gestor");
+
+      usuario = await UserRepository.findById(userId);
+      if (!usuario) throw new Error("Usuário não encontrado");
+      const { password, ...safeUsuario } = usuario;
+      return safeUsuario;
+    }
+
+    // cultivador/voluntario: can only fetch users in their own family (or themselves which already handled)
+    if (["cultivador", "voluntario"].includes(requester.role)) {
+      if (!requester.familiaId) throw new Error("Acesso negado");
+      const target = await UserRepository.findById(userId);
+      if (!target) throw new Error("Usuário não encontrado");
+      if (target.familiaId !== requester.familiaId)
+        throw new Error("Acesso negado");
+      const { password, ...safeUsuario } = target;
+      return safeUsuario;
+    }
+
+    throw new Error("Acesso negado");
   },
 
   updateUserAdmin: async (userId, data) => {
     const userExist = await UserRepository.findById(userId);
-
-    if (userExist) {
-      throw new Error("User already exists");
+    if (!userExist) {
+      throw new Error("Usuário não encontrado");
     }
 
-    return await UserRepository.updateUserAdmin(id, data);
+    return await UserRepository.updateUserAdmin(userId, data);
   },
 };

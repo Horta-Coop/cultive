@@ -11,6 +11,13 @@ const SignupPage = lazy(() => import("../pages/SignupPage"));
 const DashboardPage = lazy(() => import("../pages/DashboardPage"));
 const HortasPage = lazy(() => import("../pages/GardenPage"));
 const PlantingsPage = lazy(() => import("../pages/PlantingsPage"));
+const FamiliesPage = lazy(() => import("../pages/FamiliasPage"));
+const UsuariosPage = lazy(() => import("../pages/UsuariosPage"));
+const ComunicacaoPage = lazy(() => import("../pages/ComunicacaoPage"));
+const ColheitasPage = lazy(() => import("../pages/ColheitasPage"));
+const HelpPage = lazy(() => import("../pages/HelpPage"));
+const NotificationsPage = lazy(() => import("../pages/NotificationPage"));
+const PerfilPage = lazy(() => import("../pages/ProfilePage"));
 
 export default function AppRoutes() {
   return (
@@ -27,6 +34,13 @@ export default function AppRoutes() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/hortas" element={<HortasPage />} />
             <Route path="/plantios" element={<PlantingsPage />} />
+            <Route path="/colheitas" element={<ColheitasPage />} />
+            <Route path="/familias" element={<FamiliesPage />} />
+            <Route path="/usuarios" element={<UsuariosPage />} />
+            <Route path="/comunicacao" element={<ComunicacaoPage />} />
+            <Route path="/ajuda" element={<HelpPage />} />
+            <Route path="/notificacoes" element={<NotificationsPage />} />
+            <Route path="/perfil" element={<PerfilPage />} />
           </Route>
         </Route>
 

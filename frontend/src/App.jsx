@@ -7,19 +7,26 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import AppRoutes from "./routes/AppRoutes";
 
 function App() {
-  const {checkAuth, checkinAuth} = useUserStore()
+  const { checkAuth, checkinAuth } = useUserStore();
 
   useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
+    checkAuth();
+  }, [checkAuth]);
 
-  if(checkinAuth) return <LoadingSpinner />
+  if (checkinAuth) return <LoadingSpinner />;
   return (
-    <div className="min-h-screen bg-gray-900 relative overflow-hidden" data-theme="lemonade">
-      <div className="">
-        <AppRoutes />
+    <div
+      className="flex flex-col min-h-screen w-full bg-base-100 text-base-content overflow-x-hidden"
+      data-theme="light"
+    >
+      <main className="w-full flex justify-center items-start sm:items-center">
+        <div className="w-full">
+          <AppRoutes />
+        </div>
+      </main>
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
+        <Toaster />
       </div>
-      <Toaster/>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore";
 import LoadingSpinner from "../components/LoadingSpinner";
-import Navbar from "../components/Navbar";
+import Header from "../components/Header";
 
 const PublicRoute = () => {
   const { user, checkinAuth } = useUserStore();
@@ -12,7 +12,7 @@ const PublicRoute = () => {
 
   return (
     <>
-      <Navbar />
+      <Header />
       <Outlet />
     </>
   );
