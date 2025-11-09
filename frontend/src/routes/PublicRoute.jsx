@@ -9,10 +9,10 @@ const PublicRoute = () => {
 
   useEffect(() => {
     checkAuth(true);
-  }, [checkAuth]);
+  }, []);
 
   if (checkinAuth) {
-    return <LoadingOverlay message="Verificando autenticação..." loading />;
+    return <LoadingOverlay message="Verificando autenticação..." loading={true} />;
   }
 
   if (user) {

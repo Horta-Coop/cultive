@@ -28,11 +28,11 @@ const PerfilPage = lazy(() => import("@/pages/usuarios/ProfilePage"));
 
 export default function AppRoutes() {
   return (
-    <Suspense>
+    <Suspense fallback={<div>Carregando...</div>}>
       <Routes>
         {/* Rotas públicas */}
         <Route element={<PublicRoute />}>
-          <Route path="/" element={<HomePage />} /> 
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
         </Route>

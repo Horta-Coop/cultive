@@ -14,6 +14,8 @@ export default function DashboardLayout() {
     );
   }, [sidebarOpen]);
 
+  if (!user) return null; 
+
   return (
     <div className="flex min-h-screen bg-base-100">
       {sidebarOpen && (
