@@ -3,47 +3,60 @@ import { UserRepository } from "../repositories/UserRepository.js";
 
 export const protectRoute = async (req, res, next) => {
   try {
-    const accessToken = req.cookies.accessToken;
+    const accessToken =
+      req.cookies?.accessToken || req.headers["authorization"]?.split(" ")[1];
 
     if (!accessToken) {
       return res
         .status(401)
-        .json({ messgae: "Unauthorized - No accesstoken provider" });
+        .json({ message: "Não autorizado - Nenhum token de acesso fornecido" });
     }
 
+    let decoded;
     try {
-      const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-
-      const user = await UserRepository.findById(decoded.userId);
-
-      if (!user) {
-        return res.status(401).json({ messgae: "User not found" });
-      }
-
-      req.user = user;
-      next();
-    } catch (error) {
-      if (error.name === "TokenExpiredError") {
+      decoded = await jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
         return res
           .status(401)
-          .json({ messgae: "Unauthorized - Access token expired" });
+          .json({ message: "Não autorizado - Token expirado" });
       }
-
-      throw error;
+      return res
+        .status(401)
+        .json({ message: "Não autorizado - Token inválido" });
     }
+
+    const user = await UserRepository.findById(decoded.userId);
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ message: "Não autorizado - Usuário não encontrado" });
+    }
+
+    req.user = user;
+    next();
   } catch (error) {
-    console.log("Error in middleware auth");
-    res.status(401).json({ messgae: "Unauthorized - Invalid access token" });
+    console.error("Erro no middleware protectRoute:", error);
+    return res.status(500).json({ message: "Erro interno do servidor" });
   }
 };
 
-// Middleware genérico para permitir múltiplos roles
+// Middleware para verificar roles
 export const allowRoles = (...roles) => {
   return (req, res, next) => {
     const userRole = req.user?.role;
-    if (!userRole || !roles.includes(userRole)) {
-      return res.status(403).json({ message: "Access denied" });
+
+    if (!userRole) {
+      return res.status(403).json({ message: "Acesso negado - Role ausente" });
     }
+
+    if (!roles.includes(userRole)) {
+      return res
+        .status(403)
+        .json({ message: "Acesso negado - Permissões insuficientes" });
+    }
+
     next();
   };
 };

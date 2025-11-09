@@ -1,12 +1,185 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
-  binaryTargets = ["native", "debian-openssl-3.0.x"] // <-- Altere aqui
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id               String            @id @default(uuid())
+  email            String            @unique
+  senhaHash        String
+  telefone         String?
+  updatedAt        DateTime          @updatedAt
+  onBoarding       Boolean           @default(false)
+  endereco         String?
+  familiaId        String?
+  nome             String?
+  pictureUrl       String?
+  resetToken        String?   // token temporário para reset
+  resetTokenExpiry  DateTime? // expiração do token
+  role             Role?             @default(cultivador)
+  username         String            @unique
+  Disponibilidade  Disponibilidade?
+  familiasGestor   Familia[]         @relation("GestorFamilia")
+  hortasGestor     Horta[]           @relation("GestorHortas")
+  Log              Log[]
+  Notificacao      Notificacao[]
+  PerfilAdmin      PerfilAdmin?
+  PerfilCultivador PerfilCultivador?
+  PerfilGestor     PerfilGestor?
+  PerfilVoluntario PerfilVoluntario?
+  familiasMembro   Familia?          @relation("UsuarioFamilia", fields: [familiaId], references: [id])
+}
+
+model PerfilGestor {
+  id                   String  @id @default(uuid())
+  usuarioId            String  @unique
+  cargo                String?
+  recebeAlertas        Boolean @default(true)
+  organizacaoVinculada String
+  observacoes          String?
+  usuario              Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Disponibilidade {
+  id                 String            @id @default(uuid())
+  usuarioId          String            @unique
+  diaSemana          DiaSemana
+  horarioIni         DateTime
+  horarioFim         DateTime
+  perfilVoluntarioId String?
+  PerfilVoluntario   PerfilVoluntario? @relation(fields: [perfilVoluntarioId], references: [id])
+  usuario            Usuario           @relation(fields: [usuarioId], references: [id])
+}
+
+model PerfilVoluntario {
+  id              String            @id @default(uuid())
+  usuarioId       String            @unique
+  interesse       String?
+  disponivel      Boolean           @default(true)
+  observacoes     String?
+  disponibilidade Disponibilidade[]
+  usuario         Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model PerfilCultivador {
+  id               String  @id @default(uuid())
+  usuarioId        String  @unique
+  tipoExperiencia  String?
+  habilidades      String?
+  plantasFavoritas String?
+  observacoes      String?
+  usuario          Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model PerfilAdmin {
+  id          String  @id @default(uuid())
+  cargo       String
+  ativo       Boolean
+  observacoes String?
+  usuarioId   String  @unique
+  usuario     Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Familia {
+  representante String
+  qtdMembros    Int
+  descricao     String?
+  gestorId      String
+  id            String    @id @default(uuid())
+  nome          String
+  avisos        Aviso[]
+  gestor        Usuario   @relation("GestorFamilia", fields: [gestorId], references: [id])
+  hortas        Horta[]   @relation("HortasFamilia")
+  membros       Usuario[] @relation("UsuarioFamilia")
+}
+
+model Horta {
+  areaCultivada Decimal
+  tipoSolo      String
+  tipoHorta     EHorta
+  observacoes   String?
+  familiaId     String?
+  cordenada     String?
+  descricao     String?
+  endereco      String
+  gestorId      String?
+  id            String    @id @default(uuid())
+  nome          String
+  familia       Familia?  @relation("HortasFamilia", fields: [familiaId], references: [id])
+  gestor        Usuario?  @relation("GestorHortas", fields: [gestorId], references: [id])
+  plantios      Plantio[]
+}
+
+model Plantio {
+  tipoPlantacao      String
+  previsaoColheita   DateTime
+  quantidadePlantada Decimal
+  unidadeMedida      String
+  observacoes        String?
+  hortaId            String
+  colheitaId         String?   @unique
+  cultura            String
+  dataColheita       DateTime?
+  dataInicio         DateTime
+  id                 String    @id @default(uuid())
+  colheita           Colheita?
+  horta              Horta     @relation(fields: [hortaId], references: [id], onDelete: Cascade)
+}
+
+model Colheita {
+  dataColheita      DateTime @default(now())
+  quantidadeColhida Decimal
+  unidadeMedida     String
+  destinoColheita   String
+  plantioId         String   @unique
+  observacoes       String?
+  cultura           String
+  id                String   @id @default(uuid())
+  plantio           Plantio  @relation(fields: [plantioId], references: [id], onDelete: Cascade)
+}
+
+model Aviso {
+  id         String   @id @default(uuid())
+  titulo     String
+  descricao  String
+  dataEvento DateTime
+  familiaId  String
+  updatedAt  DateTime @updatedAt
+  familia    Familia  @relation(fields: [familiaId], references: [id])
+}
+
+model Notificacao {
+  id        String   @id @default(uuid())
+  usuarioId String
+  titulo    String
+  mensagem  String
+  lida      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Log {
+  id        String   @id @default(uuid())
+  usuarioId String
+  acao      String
+  contexto  String?
+  data      DateTime @default(now())
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Faq {
+  id        String   @id @default(uuid())
+  pergunta  String
+  resposta  String
+  categoria String?
+  ordem     Int?
+  criadoEm  DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Role {
@@ -31,192 +204,5 @@ enum EHorta {
   comunitaria
   institucional
   ong
+  familiar
 }
-
-model Usuario {
-  id         String  @id @default(uuid())
-  nome       String?
-  username   String  @unique
-  email      String  @unique
-  senhaHash  String
-  endereco   String?
-  telefone   String?
-  role       Role?   @default(cultivador)
-  pictureUrl String?
-  onBoarding Boolean @default(false)
-
-  familiaId      String?
-  familiasMembro Familia?  @relation(name: "UsuarioFamilia", fields: [familiaId], references: [id])
-  familiasGestor Familia[] @relation("GestorFamilia") // usuário como gestor de famílias
-  hortasGestor   Horta[]   @relation("GestorHortas")
-
-  PerfilGestor     PerfilGestor?
-  Disponibilidade  Disponibilidade?
-  PerfilVoluntario PerfilVoluntario?
-  PerfilCultivador PerfilCultivador?
-  PerfilAdmin      PerfilAdmin?
-  Notificacao      Notificacao[]
-  Log              Log[]
-
-  updatedAt DateTime @updatedAt
-}
-
-model PerfilGestor {
-  id                   String  @id @default(uuid())
-  usuarioId            String  @unique
-  usuario              Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  cargo                String? // exemplo: "Gestor Regional"
-  recebeAlertas        Boolean @default(true)
-  organizacaoVinculada String //Nome da ONG/Grupo/ ou Iniciativa responsavel
-  observacoes          String?
-}
-
-model Disponibilidade {
-  id                 String            @id @default(uuid())
-  usuarioId          String            @unique
-  usuario            Usuario           @relation(fields: [usuarioId], references: [id])
-  diaSemana          DiaSemana
-  horarioIni         DateTime // formato HH:mm, por simplicidade
-  horarioFim         DateTime // formato HH:mm
-  PerfilVoluntario   PerfilVoluntario? @relation(fields: [perfilVoluntarioId], references: [id])
-  perfilVoluntarioId String?
-}
-
-model PerfilVoluntario {
-  id              String            @id @default(uuid())
-  usuarioId       String            @unique
-  usuario         Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  interesse       String? // ex: "Irrigação", "Organização"
-  disponivel      Boolean           @default(true)
-  disponibilidade Disponibilidade[]
-  observacoes     String?
-}
-
-model PerfilCultivador {
-  id               String  @id @default(uuid())
-  usuarioId        String  @unique
-  usuario          Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  tipoExperiencia  String? // "iniciante", "experiente", etc.
-  habilidades      String?
-  plantasFavoritas String?
-  observacoes      String?
-}
-
-model PerfilAdmin {
-  id          String  @id @default(uuid()) // <== adicione @default(uuid())
-  cargo       String
-  ativo       Boolean
-  observacoes String?
-
-  usuarioId String  @unique
-  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-}
-
-model Familia {
-  id            String    @id @default(uuid())
-  nome          String
-  representante String
-  descricao     String?
-  qtdMembros    Int
-  gestorId      String
-  membros       Usuario[] @relation(name: "UsuarioFamilia")
-  hortas        Horta[]   @relation("HortasFamilia")
-  avisos        Aviso[]
-
-  gestor Usuario? @relation("GestorFamilia", fields: [gestorId], references: [id])
-}
-
-model Horta {
-  id            String  @id @default(uuid())
-  nome          String
-  endereco      String
-  cordenada     String
-  areaCultivada Decimal
-  tipoSolo      String
-  tipoHorta     EHorta
-  descricao     String?
-  observacoes   String?
-
-  gestorId String?
-  gestor   Usuario? @relation("GestorHortas", fields: [gestorId], references: [id])
-
-  familiaId String?
-  familia   Familia? @relation("HortasFamilia", fields: [familiaId], references: [id])
-
-  plantios Plantio[]
-}
-
-model Plantio {
-  id                 String    @id @default(uuid())
-  cultura            String
-  tipoPlantacao      String // Tipo do plantio (ex: orgânico, convencional, hidropônico)
-  dataInicio         DateTime // Data de início do plantio
-  previsaoColheita   DateTime // Previsão de quando a colheita deve ocorrer
-  dataColheita       DateTime? // Data real da colheita (opcional, pois pode ainda não ter ocorrido)
-  quantidadePlantada Decimal // Quantidade plantada (ex: 10.5)
-  unidadeMedida      String // Unidade da quantidade (ex: kg, unidades, m²)
-  observacoes        String? // Campo opcional para anotações ou observações extras
-
-  // Relações
-  hortaId    String
-  colheitaId String?   @unique
-  horta      Horta     @relation(fields: [hortaId], references: [id], onDelete: Cascade)
-  colheita   Colheita?
-}
-
-model Colheita {
-  id                String   @id @default(uuid())
-  cultura           String // Nome da cultura colhida (ex: alface, cenoura)
-  dataColheita      DateTime @default(now()) // Data em que a colheita foi realizada
-  quantidadeColhida Decimal // Quantidade colhida
-  unidadeMedida     String // Unidade da quantidade (ex: kg, maços, unidades)
-  destinoColheita   String // Destino da colheita (ex: consumo, doação, venda)
-  observacoes       String? // Comentários ou anotações adicionais
-
-  // Relacionamentos
-  plantioId String  @unique // Chave estrangeira e única (relação 1-1)
-  plantio   Plantio @relation(fields: [plantioId], references: [id], onDelete: Cascade)
-}
-
-model Aviso {
-  id         String   @id @default(uuid())
-  titulo     String
-  descricao  String
-  dataEvento DateTime
-  familiaId  String
-  familia    Familia  @relation(fields: [familiaId], references: [id])
-
-  updatedAt DateTime @updatedAt
-}
-
-model Notificacao {
-  id        String   @id @default(uuid())
-  usuarioId String
-  titulo    String
-  mensagem  String
-  tipo      String?   // opcional: "evento", "aviso", "alerta", etc.
-  lida      Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
-}
-
-
-model Log {
-  id        String   @id @default(uuid())
-  usuarioId String
-  acao      String
-  contexto  String?
-  data      DateTime @default(now())
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
-}
-
-model Faq {
-  id        String   @id @default(uuid())
-  pergunta  String
-  resposta  String
-  categoria String?      // ex: "plantio", "sistema", "comunidade"
-  ordem     Int?         // Para ordenação
-  criadoEm  DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-

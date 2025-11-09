@@ -1,19 +1,35 @@
+import { z } from "zod";
+import { usuarioSchema } from "../schemas/user.schema.js";
 import { UserService } from "../services/UserService.js";
+import { sendResetEmail } from "../utils/email.js";
 
+// Listar todos os usuários
 export const getAllUsers = async (req, res) => {
   try {
     if (!["admin", "gestor"].includes(req.user.role)) {
-      return res.status(403).json({ message: "Acesso Negado" });
+      return res.status(403).json({ message: "Acesso negado" });
     }
 
-    const usuarios = await UserService.getAllUsers({ requester: req.user });
+    const { page, limit, search, role, orderBy, sortDir } = req.query;
 
-    res.json({ message: "Usuarios", usuarios });
+    const usuarios = await UserService.getAllUsers({
+      requester: req.user,
+      page,
+      limit,
+      search,
+      role,
+      orderBy,
+      sortDir,
+    });
+
+    return res.json({ message: "Usuários", usuarios });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: error.message });
   }
 };
 
+// Obter um usuário específico
 export const getUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -21,36 +37,94 @@ export const getUser = async (req, res) => {
       userId: id,
       requester: req.user,
     });
-    res.json({ message: "Usuario", usuario });
+    return res.json({ message: "Usuário", usuario });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: error.message });
   }
 };
 
+// Atualizar usuário
 export const updateUser = async (req, res) => {
   const body = req.body;
-  const result = signupSchema.safeParse(body);
+  const result = usuarioSchema.safeParse(body);
 
   if (!result.success) {
     const errors = result.error.format();
     return res.status(422).json({ message: "Erro de validação", errors });
   }
 
-  const { nome, username, email, senha } = result.data;
   try {
     const { id } = req.params;
+    let usuario;
 
-    let usuario = {};
     if (req.user.role === "admin") {
-      usuario = await UserService.updateUserAdmin(id, req.body);
+      usuario = await UserService.updateUserAdmin(id, body);
+    } else if (req.user.role === "gestor") {
+      usuario = await UserService.updateUserGestor(id, req.user.id, body);
+    } else {
+      return res.status(403).json({ message: "Acesso negado" });
     }
 
-    if (req.user.role === "gestor") {
-      usuario = await UserService.updateUserGestor(id, req.user.id, req.body);
-    }
-
-    res.json({ message: "Usuario Atualizado", usuario });
+    return res.json({ message: "Usuário atualizado", usuario });
   } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// Criar usuário pelo admin
+export const createUserByAdmin = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Acesso negado" });
+    }
+
+    const schema = z.object({
+      nome: z.string().min(2, "Nome muito curto"),
+      username: z.string().min(3, "Username muito curto"),
+      email: z.string().email("Email inválido"),
+      role: z.enum(["admin", "gestor", "cultivador", "voluntario"]).optional(),
+      familiaId: z.string().uuid().optional().nullable(),
+    });
+
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res
+        .status(422)
+        .json({ message: "Erro de validação", errors: result.error.format() });
+    }
+
+    const { nome, username, email, role, familiaId } = result.data;
+
+    // Gera senha temporária
+    const tempPassword = UserService.generateTempPassword();
+
+    // Cria usuário
+    const user  = await UserService.createUserAdmin({
+      nome,
+      username,
+      email,
+      senha: tempPassword,
+      role,
+      familiaId,
+    });
+
+    // Cria token de reset
+    console.log(user);
+    const resetToken = await UserService.createResetToken(user.id);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    // Envia email de redefinição
+    await sendResetEmail(email, resetLink);
+
+    return res.json({
+      message:
+        "Usuário criado com sucesso. Email enviado para redefinir senha.",
+      user,
+    });
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: error.message });
   }
 };

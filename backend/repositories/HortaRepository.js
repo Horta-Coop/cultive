@@ -1,4 +1,31 @@
-import { prisma } from "../config/prisma.js";
+import prisma from "../config/prisma.js";
+function normalizarTexto(str) {
+  if (!str || typeof str !== "string") return "";
+  return str
+    .normalize("NFD") // separa acentos
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
+    .toLowerCase()
+    .trim();
+}
+
+function mapearTipoHorta(tipo) {
+  const tipoNormalizado = normalizarTexto(tipo);
+
+  const mapa = {
+    escolar: "Escolar",
+    comunitaria: "Comunitaria",
+    institucional: "Institucional",
+    ong: "Ong",
+    familiar: "Familiar",
+  };
+
+  const tipoMapeado = mapa[tipoNormalizado];
+  if (!tipoMapeado) {
+    throw new Error(`Tipo de horta inválido: ${tipo}`);
+  }
+
+  return tipoMapeado;
+}
 
 export const HortaRepository = {
   findAll: async (options = {}) => {
@@ -49,6 +76,8 @@ export const HortaRepository = {
   },
 
   create: async (data) => {
+    data.tipoHorta = mapearTipoHorta(data.tipoHorta);
+    
     return await prisma.horta.create({
       data,
       include: {

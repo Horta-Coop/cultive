@@ -16,10 +16,10 @@ import {
   Sprout,
 } from "lucide-react";
 
-import { useUserStore } from "../stores/useUserStore";
+import { useUserStore } from "@/stores/useUserStore";
 
 const Sidebar = ({ user, isOpen, onToggle }) => {
-  const { logout } = useUserStore();
+  const { logout } = useUserStore((state) => state);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -33,39 +33,43 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
   const role = user?.role ?? "cultivador";
   const displayName = user?.nome || user?.name || "Usuário";
 
-  const menuItems = [
+  const baseMenu = [
     { path: "/dashboard", icon: Home, label: "Dashboard" },
     { path: "/hortas", icon: Leaf, label: "Hortas" },
     { path: "/plantios", icon: Sprout, label: "Plantios" },
     { path: "/colheitas", icon: Wheat, label: "Colheitas" },
     { path: "/comunicacao", icon: MessageSquare, label: "Comunicação" },
-    ...(role === "admin"
-      ? [{ path: "/usuarios", icon: Users, label: "Usuários" }]
-      : []),
-    ...(["gestor", "admin"].includes(role)
-      ? [{ path: "/familias", icon: Users, label: "Famílias" }]
-      : []),
-    { path: "/configuracoes", icon: Settings, label: "Configurações" },
     { path: "/notificacoes", icon: Bell, label: "Notificações" },
     { path: "/ajuda", icon: HelpCircle, label: "Ajuda" },
+    { path: "/configuracoes", icon: Settings, label: "Configurações" },
   ];
+
+  const roleMenus = {
+    admin: [
+      { path: "/usuarios", icon: Users, label: "Usuários" },
+      { path: "/familias", icon: Users, label: "Famílias" },
+    ],
+    gestor: [{ path: "/familias", icon: Users, label: "Famílias" }],
+    cultivador: [],
+    voluntario: [],
+  };
+
+  const menuItems = [...baseMenu, ...(roleMenus[role.toLowerCase()] || [])];
 
   return (
     <div
       className={`fixed inset-y-0 left-0 z-50 h-full transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
-      } md:translate-x-0 md:flex`}
+      } lg:translate-x-0 lg:flex`}
     >
-      {/* O contêiner interno mantém a largura, altura e layout flexbox */}
       <div className="flex flex-col bg-base-100 border-r border-base-300 h-full relative w-64 shadow-xl">
-        {/* Cabeçalho - Fixo no topo */}
         <div className="p-4 border-b border-base-300 flex items-center justify-between flex-shrink-0">
           <Link to="/dashboard" className="flex items-center space-x-2">
             <Leaf size={28} className="text-primary" />
             <span className="text-xl font-bold text-base-content">Cultive</span>
           </Link>
           <button
-            className="btn btn-ghost btn-sm p-1 md:hidden"
+            className="btn btn-ghost btn-sm p-1 lg:hidden"
             onClick={onToggle}
             aria-label="Toggle Sidebar"
           >
@@ -73,7 +77,6 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
           </button>
         </div>
 
-        {/* Navegação - Elemento que Cresce e Rola (flex-grow + overflow-y-auto) */}
         <div className="py-2 flex-grow overflow-y-auto">
           <nav className="px-2 space-y-1">
             {menuItems.map((item) => {

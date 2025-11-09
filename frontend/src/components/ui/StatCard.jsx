@@ -7,12 +7,13 @@ const StatCard = ({ title, value, description, icon, smallValue = false }) => {
           <div className="min-w-0">
             <p className="text-sm font-medium text-base-content/70">{title}</p>
             <p
-              className={`font-bold text-base-content truncate ${
+              className={`font-bold text-base-content break-words whitespace-normal ${
                 smallValue ? "text-xl" : "text-3xl"
               }`}
             >
               {value}
             </p>
+
             {description && (
               <p className="text-xs text-base-content/60 mt-1">{description}</p>
             )}

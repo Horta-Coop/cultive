@@ -1,26 +1,14 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import Navbar from "./components/Navbar";
 import { Toaster } from "react-hot-toast";
-import { useUserStore } from "./stores/useUserStore";
-import { useEffect } from "react";
-import LoadingSpinner from "./components/LoadingSpinner";
-import AppRoutes from "./routes/AppRoutes";
+import AppRoutes from "@/routes/AppRoutes";
 
 function App() {
-  const { checkAuth, checkinAuth } = useUserStore();
-
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
-
-  if (checkinAuth) return <LoadingSpinner />;
   return (
     <div
-      className="flex flex-col min-h-screen w-full bg-base-100 text-base-content overflow-x-hidden"
-      data-theme="light"
+      className="flex flex-col min-h-screen w-full bg-base-200 text-base-content overflow-x-hidden"
+      data-theme="natal-encantado"
     >
-      <main className="w-full flex justify-center items-start sm:items-center">
-        <div className="w-full">
+      <main className="w-full h-full flex justify-center items-start sm:items-center">
+        <div className="w-full h-full">
           <AppRoutes />
         </div>
       </main>

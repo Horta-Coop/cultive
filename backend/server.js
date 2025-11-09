@@ -21,10 +21,15 @@ dotenv.config();
 
 server.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "http://10.10.10.42:5173", // IP da sua máquina na rede
-    ],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (origin.includes(":5173")) {
+        return callback(null, true);
+      }
+      else {
+        return callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   })
 );
@@ -37,10 +42,10 @@ server.use(cookieParser());
 server.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 server.use("/api/auth", authRoutes);
 server.use("/api/horta", hortaRoutes);
-server.use("/api/users", userRoutes);
+server.use("/api/user", userRoutes);
 server.use("/api/plantio", plantioRoute);
-server.use("/api/familias", familiaRoutes);
-server.use("/api/colheitas", colheitaRoutes);
+server.use("/api/familia", familiaRoutes);
+server.use("/api/colheita", colheitaRoutes);
 
 server.listen(PORT,"0.0.0.0", () => {
   console.log(`Servidor rodando na porta ${PORT}`);

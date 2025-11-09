@@ -1,50 +1,53 @@
-import { prisma } from "../config/prisma.js";
+import  prisma  from "../config/prisma.js";
 
 export const FamiliaRepository = {
   findById: async (id) => {
     return await prisma.familia.findUnique({
       where: { id },
-      select: {
-        id: true,
-        nome: true,
-        representante: true,
-        gestorId: true,
+      include: {
         membros: { select: { id: true, nome: true, email: true, role: true } },
+        gestor: { select: { id: true, nome: true, email: true } },
       },
     });
   },
 
-  findFamilyByGestor: async (gestorId) => {
+  findAll: async ({ take, skip } = {}) => {
+    return await prisma.familia.findMany({
+      take,
+      skip,
+      orderBy: { nome: "asc" },
+      include: {
+        membros: { select: { id: true, nome: true, email: true, role: true } },
+        gestor: { select: { id: true, nome: true, email: true } },
+      },
+    });
+  },
+
+  findByGestorId: async (gestorId, { take, skip } = {}) => {
     return await prisma.familia.findMany({
       where: { gestorId },
-      select: {
-        id: true,
-        nome: true,
-        representante: true,
+      take,
+      skip,
+      orderBy: { nome: "asc" },
+      include: {
         membros: { select: { id: true, nome: true, email: true, role: true } },
+        gestor: { select: { id: true, nome: true, email: true } },
       },
     });
   },
 
-  createFamilia: async ({ nome, representante, gestorId, qtdMembros }) => {
-    return await prisma.familia.create({
-      data: { nome, representante, gestorId, qtdMembros },
-    });
+  createFamilia: async (data) => {
+    return await prisma.familia.create({ data });
   },
-  findAll: async (options = {}) => {
-    return await prisma.familia.findMany({
-      where: options.where ?? {},
-      take: options.take,
-      skip: options.skip,
-      orderBy: options.orderBy,
-      include: options.include ?? { membros: true },
-    });
-  },
+
   updateFamilia: async (id, data) => {
     return await prisma.familia.update({
       where: { id },
       data,
-      include: { membros: true },
+      include: {
+        membros: { select: { id: true, nome: true, email: true, role: true } },
+        gestor: { select: { id: true, nome: true, email: true } },
+      },
     });
   },
 

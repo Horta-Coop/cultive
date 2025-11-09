@@ -9,7 +9,7 @@
  * @swagger
  * /api/users/:
  *   get:
- *     summary: Retorna a lista de todos os usuários (apenas administradores)
+ *     summary: Retorna a lista de todos os usuários (apenas admin ou gestor)
  *     tags: [Usuários]
  *     security:
  *       - bearerAuth: []
@@ -42,7 +42,7 @@
  *         name: orderBy
  *         schema:
  *           type: string
- *           example: name
+ *           example: nome
  *         description: Campo para ordenação
  *       - in: query
  *         name: sortDir
@@ -78,11 +78,12 @@
  *                       role:
  *                         type: string
  *                         example: cultivador
- *       401:
- *         description: Acesso negado. Usuário não é administrador.
+ *       403:
+ *         description: Acesso negado. Usuário não é admin ou gestor.
  *       500:
  *         description: Erro interno no servidor
  */
+
 /**
  * @swagger
  * /api/users/{id}:
@@ -128,4 +129,72 @@
  *         description: Usuário não encontrado
  *       500:
  *         description: Erro interno no servidor
+ */
+
+/**
+ * @swagger
+ * /api/users/{id}:
+ *   put:
+ *     summary: Atualiza um usuário específico pelo ID
+ *     tags: [Usuários]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nome:
+ *                 type: string
+ *                 example: João da Silva
+ *               username:
+ *                 type: string
+ *                 example: joaosilva
+ *               email:
+ *                 type: string
+ *                 example: joao@email.com
+ *               senha:
+ *                 type: string
+ *                 example: senha123
+ *     responses:
+ *       200:
+ *         description: Usuário atualizado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Usuario Atualizado
+ *                 usuario:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       example: 64f0c3a5e6b29d9f1a7c4a91
+ *                     nome:
+ *                       type: string
+ *                       example: João da Silva
+ *                     email:
+ *                       type: string
+ *                       example: joao@email.com
+ *                     role:
+ *                       type: string
+ *                       example: cultivador
+ *       403:
+ *         description: Acesso negado. Usuário não tem permissão
+ *       422:
+ *         description: Erro de validação dos dados enviados
+ *       500:
+ *         description: Erro interno do servidor
  */

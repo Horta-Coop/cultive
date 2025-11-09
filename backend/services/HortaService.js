@@ -1,22 +1,24 @@
 import { HortaRepository } from "../repositories/HortaRepository.js";
 import { FamiliaRepository } from "../repositories/FamiliaRepository.js";
 
-/**
- * HortaService: regras de negócio e controle de acesso para hortas.
- * Métodos recebem { requester } quando precisam avaliar permissões.
- */
 export const HortaService = {
   getAllHortas: async (params = {}) => {
     const { requester, page, limit, search, orderBy, sortDir } = params;
 
     const take = limit ? parseInt(limit, 10) : undefined;
-    const skip = page && limit ? (parseInt(page, 10) - 1) * parseInt(limit, 10) : undefined;
+    const skip =
+      page && limit
+        ? (parseInt(page, 10) - 1) * parseInt(limit, 10)
+        : undefined;
 
     const order = orderBy ? { [orderBy]: sortDir || "asc" } : undefined;
 
-    // Admin vê todas
     if (requester.role === "admin") {
-      return await HortaRepository.findAll({ take, skip, orderBy: order });
+      return await HortaRepository.findAll({
+        take,
+        skip,
+        orderBy: order,
+      });
     }
 
     // Gestor vê hortas onde é gestor e hortas das famílias que ele gerencia
@@ -25,7 +27,9 @@ export const HortaService = {
 
       const familias = await FamiliaRepository.findFamilyByGestor(requester.id);
       const familiaIds = familias.map((f) => f.id);
-      const familiaHortas = familiaIds.length ? await HortaRepository.findByFamiliaIds(familiaIds) : [];
+      const familiaHortas = familiaIds.length
+        ? await HortaRepository.findByFamiliaIds(familiaIds)
+        : [];
 
       // Unir e deduplicar por id
       const merged = [...gestorHortas, ...familiaHortas];
@@ -39,7 +43,9 @@ export const HortaService = {
     // Cultivador/voluntario: só hortas vinculadas à sua família (se tiver)
     if (requester.role === "cultivador" || requester.role === "voluntario") {
       if (!requester.familiaId) return [];
-      return await HortaRepository.findAll({ where: { familiaId: requester.familiaId } });
+      return await HortaRepository.findAll({
+        where: { familiaId: requester.familiaId },
+      });
     }
 
     // fallback: nenhuma horta
@@ -65,7 +71,10 @@ export const HortaService = {
     }
 
     // Cultivador/voluntario tem acesso somente se horta pertence à sua familia
-    if ((requester.role === "cultivador" || requester.role === "voluntario") && requester.familiaId) {
+    if (
+      (requester.role === "cultivador" || requester.role === "voluntario") &&
+      requester.familiaId
+    ) {
       if (horta.familiaId === requester.familiaId) return horta;
       throw new Error("Acesso negado à horta");
     }
@@ -98,7 +107,8 @@ export const HortaService = {
     if (!horta) throw new Error("Horta não encontrada");
 
     // Admin pode atualizar qualquer horta
-    if (requester.role === "admin") return await HortaRepository.update(id, data);
+    if (requester.role === "admin")
+      return await HortaRepository.update(id, data);
 
     // Gestor pode atualizar se for gestor da horta
     if (requester.role === "gestor") {

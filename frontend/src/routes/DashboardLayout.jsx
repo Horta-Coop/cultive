@@ -5,14 +5,14 @@ import { Menu } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore";
 
 export default function DashboardLayout() {
-  const { user, checkAuth } = useUserStore();
+  const { user } = useUserStore((state) => state);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (user == null && typeof checkAuth === "function") {
-      checkAuth();
-    }
-  }, [user, checkAuth]);
+    window.dispatchEvent(
+      new CustomEvent("sidebar-toggle", { detail: sidebarOpen })
+    );
+  }, [sidebarOpen]);
 
   return (
     <div className="flex min-h-screen bg-base-100">
@@ -30,20 +30,23 @@ export default function DashboardLayout() {
         onToggle={() => setSidebarOpen((prev) => !prev)}
       />
 
-      {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col md:ml-64 transition-all duration-300">
-        {/* Header mobile */}
-        <header className="md:hidden p-3 border-b border-base-300 bg-base-100 flex-shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="btn btn-ghost btn-square"
-            aria-label="Abrir menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ${
+          sidebarOpen ? "ml-64" : ""
+        } lg:ml-64`}
+      >
+        <header className="lg:hidden p-3 border-b border-base-300 bg-base-100 flex-shrink-0">
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="btn btn-ghost btn-square"
+              aria-label="Abrir menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
         </header>
 
-        {/* Área principal scrollável */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           <Outlet />
         </main>

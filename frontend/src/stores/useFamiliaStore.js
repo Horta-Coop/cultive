@@ -2,79 +2,90 @@ import { create } from "zustand";
 import { toast } from "react-hot-toast";
 import axios from "../lib/axios";
 
-export const useFamiliaStore = create((set) => ({
-  familias: null,
-  familia: null,
+export const useFamiliaStore = create((set, get) => ({
+  familias: [],
+  selectedFamilia: null,
   loading: false,
-  error: null,
 
+  // --- Familias ---
   fetchFamilias: async (params = {}) => {
-    set({ loading: true, error: null });
+    set({ loading: true });
     try {
-      const res = await axios.get("/api/familias", { params });
-      set({ familias: res.data?.familias ?? [], loading: false });
-      return res.data?.familias ?? [];
+      const res = await axios.get("/familia", { params });
+      set({ familias: res.data.familias, loading: false });
     } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao listar famílias");
-      return [];
-    }
-  },
-
-  getFamilia: async (id) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.get(`/api/familias/${id}`);
-      set({ familia: res.data?.familia ?? null, loading: false });
-      return res.data?.familia ?? null;
-    } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao obter família");
-      return null;
-    }
-  },
-
-  createFamilia: async (payload) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.post("/api/familias", payload);
-      // optionally refresh list
       set({ loading: false });
-      return res.data?.familia ?? null;
+      toast.error(
+        error?.response?.data?.message || "Erro ao carregar famílias"
+      );
+    }
+  },
+
+  getFamiliaById: async (id) => {
+    set({ loading: true, selectedFamilia: null });
+    try {
+      const res = await axios.get(`/familia/${id}`);
+      set({ selectedFamilia: res.data.familia, loading: false });
     } catch (error) {
-      set({ loading: false, error });
+      set({ loading: false });
+      toast.error(error?.response?.data?.message || "Erro ao buscar família");
+    }
+  },
+
+  createFamilia: async (data) => {
+    set({ loading: true });
+    try {
+      const res = await axios.post("/familia", data);
+      set((state) => ({
+        familias: [...state.familias, res.data.familia],
+        loading: false,
+      }));
+      toast.success("Família criada com sucesso!");
+    } catch (error) {
+      set({ loading: false });
       toast.error(error?.response?.data?.message || "Erro ao criar família");
-      return null;
     }
   },
 
-  updateFamilia: async (id, payload) => {
-    set({ loading: true, error: null });
+  updateFamilia: async (id, data) => {
+    set({ loading: true });
     try {
-      const res = await axios.put(`/api/familias/${id}`, payload);
-      set({ loading: false });
-      return res.data?.familia ?? null;
+      const res = await axios.put(`/familia/${id}`, data);
+      set((state) => ({
+        familias: state.familias.map((f) =>
+          f.id === id ? res.data.familia : f
+        ),
+        selectedFamilia:
+          get().selectedFamilia?.id === id
+            ? res.data.familia
+            : get().selectedFamilia,
+        loading: false,
+      }));
+      toast.success("Família atualizada com sucesso!");
     } catch (error) {
-      set({ loading: false, error });
+      set({ loading: false });
       toast.error(
         error?.response?.data?.message || "Erro ao atualizar família"
       );
-      return null;
     }
   },
 
   deleteFamilia: async (id) => {
-    set({ loading: true, error: null });
+    set({ loading: true });
     try {
-      const res = await axios.delete(`/api/familias/${id}`);
-      set({ loading: false });
-      return res.data;
+      await axios.delete(`/familia/${id}`);
+      set((state) => ({
+        familias: state.familias.filter((f) => f.id !== id),
+        selectedFamilia:
+          get().selectedFamilia?.id === id ? null : get().selectedFamilia,
+        loading: false,
+      }));
+      toast.success("Família removida com sucesso!");
     } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao deletar família");
-      return null;
+      set({ loading: false });
+      toast.error(error?.response?.data?.message || "Erro ao remover família");
     }
   },
-}));
 
-export default useFamiliaStore;
+  clearSelectedFamilia: () => set({ selectedFamilia: null }),
+}));

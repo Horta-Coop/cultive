@@ -9,7 +9,7 @@ const Header = () => {
   const handleNavLinkClick = () => setMobileMenuOpen(false);
 
   return (
-    <header className="navbar w-full bg-base-100 shadow-lg sticky top-0 z-50 relative">
+    <header className="navbar w-full bg-base-100 shadow-lg top-0 z-50 relative">
       <div className="w-full mx-auto px-4 py-3 flex items-center justify-between">
         {/* LOGO */}
         <div className="flex items-center space-x-2">

@@ -1,14 +1,23 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useUserStore } from "../stores/useUserStore";
-import LoadingSpinner from "../components/LoadingSpinner";
-import Header from "../components/Header";
+import { useUserStore } from "@/stores/useUserStore";
+import Header from "@/components/Header";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
 
 const PublicRoute = () => {
-  const { user, checkinAuth } = useUserStore();
+  const { user, checkAuth, checkinAuth } = useUserStore();
 
-  if (checkinAuth) return <LoadingSpinner />;
-  if (user) return <Navigate to="/dashboard" replace />;
+  useEffect(() => {
+    checkAuth(true);
+  }, [checkAuth]);
+
+  if (checkinAuth) {
+    return <LoadingOverlay message="Verificando autenticação..." loading />;
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <>

@@ -1,31 +1,33 @@
-import { PrismaClient } from "../generated/prisma/client.js";
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const prismaBase = new PrismaClient();
 
-// Middleware para remover senhaHash de qualquer resultado
-prisma.$use(async (params, next) => {
-  const result = await next(params);
+const prisma = prismaBase.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        if (args?.showPassword === true) {
+          const { showPassword, ...restArgs } = args;
+          return await query(restArgs);
+        }
 
-  const removeSenha = (data) => {
-    if (!data) return data;
+        const result = await query(args);
 
-    if (Array.isArray(data)) {
-      return data.map(removeSenha);
-    }
+        const removeSenha = (data) => {
+          if (!data) return data;
+          if (Array.isArray(data)) return data.map(removeSenha);
+          if (typeof data === "object" && data !== null) {
+            const { senhaHash, ...rest } = data;
+            for (const key in rest) rest[key] = removeSenha(rest[key]);
+            return rest;
+          }
+          return data;
+        };
 
-    if (typeof data === "object" && data !== null) {
-      const { senhaHash, ...rest } = data;
-      return Object.fromEntries(
-        Object.entries(rest).map(([key, value]) => [key, removeSenha(value)])
-      );
-    }
-
-    return data;
-  };
-
-  return removeSenha(result);
+        return removeSenha(result);
+      },
+    },
+  },
 });
 
-const prismaLogin = new PrismaClient();
-
-export { prisma, prismaLogin };
+export default prisma;

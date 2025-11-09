@@ -1,17 +1,25 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { useUserStore } from "../stores/useUserStore";
-import LoadingSpinner from "../components/LoadingSpinner";
+import { useUserStore } from "@/stores/useUserStore";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
 
 const ProtectedRoute = ({ allowedRoles }) => {
-  const { user, isAuthLoading } = useUserStore();
+  const { user, checkAuth, checkinAuth } = useUserStore();
 
-  if (isAuthLoading) return <LoadingSpinner />;
-  if (!user) return <Navigate to="/login" replace />;
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  if (checkinAuth) {
+    return <LoadingOverlay message="Verificando autenticação..." loading />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // redireciona para página 403 Forbidden
-    return <Navigate to="/403" replace />;
+    return <Navigate to="*" replace />;
   }
 
   return <Outlet />;

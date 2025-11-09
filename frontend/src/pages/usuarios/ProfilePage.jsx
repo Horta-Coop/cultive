@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Edit, User, Mail, Phone, MapPin, Settings, X } from "lucide-react";
-import { useUserStore } from "../stores/useUserStore";
+import { useUserStore } from "@/stores/useUserStore";
 
 export default function MeuPerfil() {
   const { user } = useUserStore();
