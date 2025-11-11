@@ -25,7 +25,7 @@ export const HortaService = {
     if (requester.role === "gestor") {
       const gestorHortas = await HortaRepository.findByGestorId(requester.id);
 
-      const familias = await FamiliaRepository.findFamilyByGestor(requester.id);
+      const familias = await FamiliaRepository.findByGestorId(requester.id);
       const familiaIds = familias.map((f) => f.id);
       const familiaHortas = familiaIds.length
         ? await HortaRepository.findByFamiliaIds(familiaIds)

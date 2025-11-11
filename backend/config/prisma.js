@@ -1,33 +1,66 @@
 import { PrismaClient } from "@prisma/client";
 
-const prismaBase = new PrismaClient();
+const prismaClientSingleton = () => {
+  const prisma = new PrismaClient({
+    log: ["error"],
+  });
 
-const prisma = prismaBase.$extends({
-  query: {
-    $allModels: {
-      async $allOperations({ model, operation, args, query }) {
-        if (args?.showPassword === true) {
-          const { showPassword, ...restArgs } = args;
-          return await query(restArgs);
-        }
+  // Listener para reconectar se a conexão cair
+  prisma.$on("error", async (e) => {
+    console.error("[PRISMA] Erro detectado:", e);
 
-        const result = await query(args);
+    if (
+      e.code === "P1017" ||
+      e.message?.includes("Connection reset") ||
+      e.message?.includes("closed the connection")
+    ) {
+      console.warn("[PRISMA] Conexão perdida. Tentando reconectar...");
+      try {
+        await prisma.$disconnect();
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await prisma.$connect();
+        console.log("[PRISMA] Reconectado com sucesso!");
+      } catch (err) {
+        console.error("[PRISMA] Falha ao reconectar:", err);
+      }
+    }
+  });
 
-        const removeSenha = (data) => {
-          if (!data) return data;
-          if (Array.isArray(data)) return data.map(removeSenha);
-          if (typeof data === "object" && data !== null) {
-            const { senhaHash, ...rest } = data;
-            for (const key in rest) rest[key] = removeSenha(rest[key]);
-            return rest;
+  // Extensão que remove senhaHash de forma segura
+  return prisma.$extends({
+    query: {
+      $allModels: {
+        async $allOperations({ args, query }) {
+          if (args?.showPassword === true) {
+            const { showPassword, ...restArgs } = args;
+            return await query(restArgs);
           }
-          return data;
-        };
 
-        return removeSenha(result);
+          const result = await query(args);
+
+          // Remove senhaHash recursivamente
+          const clean = (data) => {
+            if (!data) return data;
+            if (Array.isArray(data)) return data.map(clean);
+            if (typeof data === "object" && data !== null) {
+              const { senhaHash, ...rest } = data;
+              for (const key in rest) rest[key] = clean(rest[key]);
+              return rest;
+            }
+            return data;
+          };
+
+          return clean(result);
+        },
       },
     },
-  },
-});
+  });
+};
+
+// Evita múltiplas instâncias em hot reload
+const globalForPrisma = globalThis;
+const prisma = globalForPrisma.prisma || prismaClientSingleton();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export default prisma;

@@ -12,7 +12,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
 
   if (checkinAuth) {
     return (
-      <LoadingOverlay message="Verificando autenticação..." loading={true} />
+      <LoadingOverlay message="Verificando autenticação..." loading />
     );
   }
 

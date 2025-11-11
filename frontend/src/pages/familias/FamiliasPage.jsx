@@ -1,370 +1,484 @@
-import React, { useState } from "react";
-import { showToast } from "../lib/toast";
+import React, { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { familiaSchema } from "@/lib/validation/familiaSchema";
+import { useFamiliaStore } from "@/stores/useFamiliaStore";
+import { useUserStore } from "@/stores/useUserStore";
+import { FormModal } from "@/components/ui/FormModal";
+import { FormField } from "@/components/layout/FormField";
+import { Button } from "@/components/ui/Button";
+import ResponsiveGrid from "@/components/ui/ResponsiveGrid";
+import StatCard from "@/components/ui/StatCard";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import Badge from "@/components/ui/Badge";
+import FloatingButton from "@/components/layout/FloatingActionButton";
 import {
-  Search,
-  UserPlus,
+  Users,
   Edit,
   Trash,
+  Plus,
+  Search,
   Award,
-  Users,
   UserCheck,
-  Clock,
   Table,
   LayoutGrid,
+  User,
+  Eye,
 } from "lucide-react";
-import ResponsiveGrid from "../components/ui/ResponsiveGrid";
-import StatCard from "../components/ui/StatCard";
+import toast from "react-hot-toast";
 
-const FamiliesManager = () => {
+const Familias = () => {
+  const { user, fetchUsers, users } = useUserStore();
+  const {
+    familias,
+    fetchFamilias,
+    createFamilia,
+    updateFamilia,
+    deleteFamilia,
+  } = useFamiliaStore();
+
+  const modalRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingFamily, setEditingFamily] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // "table" ou "cards"
+  const [editingFamilia, setEditingFamilia] = useState(null);
+  const [usersLoaded, setUsersLoaded] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [viewMode, setViewMode] = useState(isMobile ? "cards" : "table");
+  const [loading, setLoading] = useState(true);
+  const [modalLoading, setModalLoading] = useState(false);
 
-  // Mock de famílias
-  const [families, setFamilies] = useState([
-    {
-      id: 1,
-      name: "Família Silva",
-      email: "silva@example.com",
-      members: 4,
-      joinDate: "2023-01-15",
-      status: "active",
-      contributionHours: 24,
-      activePlots: 2,
-      participationScore: 85,
-      lastActivity: "2023-05-10",
-      notes: "Família muito participativa e sempre presente nos mutirões.",
+  const form = useForm({
+    resolver: zodResolver(familiaSchema),
+    defaultValues: {
+      nome: "",
+      representante: "",
+      qtdMembros: 1,
+      descricao: "",
+      gestorId: "",
     },
-    {
-      id: 2,
-      name: "Família Oliveira",
-      email: "oliveira@example.com",
-      members: 3,
-      joinDate: "2023-02-20",
-      status: "active",
-      contributionHours: 18,
-      activePlots: 1,
-      participationScore: 72,
-      lastActivity: "2023-05-08",
-      notes: "",
-    },
-    {
-      id: 3,
-      name: "Família Santos",
-      email: "santos@example.com",
-      members: 5,
-      joinDate: "2023-03-05",
-      status: "pending",
-      contributionHours: 0,
-      activePlots: 0,
-      participationScore: 0,
-      lastActivity: "2023-05-01",
-      notes: "Aguardando confirmação de interesse.",
-    },
-    {
-      id: 4,
-      name: "Família Costa",
-      email: "costa@example.com",
-      members: 2,
-      joinDate: "2023-01-10",
-      status: "inactive",
-      contributionHours: 8,
-      activePlots: 0,
-      participationScore: 45,
-      lastActivity: "2023-04-15",
-      notes: "Família inativa desde abril de 2023.",
-    },
-    {
-      id: 5,
-      name: "Família Pereira",
-      email: "pereira@example.com",
-      members: 6,
-      joinDate: "2023-04-12",
-      status: "active",
-      contributionHours: 30,
-      activePlots: 3,
-      participationScore: 90,
-      lastActivity: "2023-05-12",
-      notes: "Família com grande experiência em horticultura.",
-    },
-  ]);
-
-  // Estatísticas
-  const familyStats = {
-    totalFamilies: families.length,
-    activeFamilies: families.filter((f) => f.status === "active").length,
-    totalHours: families.reduce((sum, f) => sum + f.contributionHours, 0),
-    avgParticipation:
-      families.length > 0
-        ? Math.round(
-            families.reduce((sum, f) => sum + f.participationScore, 0) /
-              families.length
-          )
-        : 0,
-  };
-
-  // Filtrar famílias
-  const filteredFamilies = families.filter((f) => {
-    const matchesSearch =
-      f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      f.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter ? f.status === statusFilter : true;
-    return matchesSearch && matchesStatus;
   });
 
-  // Ações
-  const handleAddFamily = () => {
-    setEditingFamily(null);
-    setIsModalOpen(true);
-  };
+  const { reset, control, handleSubmit } = form;
 
-  const handleEditFamily = (family) => {
-    setEditingFamily(family);
-    setIsModalOpen(true);
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        await fetchFamilias();
+      } catch {
+        toast.error("Erro ao carregar famílias");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
-  const handleDeleteFamily = (familyId) => {
-    if (window.confirm("Tem certeza que deseja remover esta família?")) {
-      setFamilies((prev) => prev.filter((f) => f.id !== familyId));
-      showToast({
-        title: "Família removida",
-        description: "A família foi removida com sucesso.",
-        type: "success",
+  const handleOpenModal = async (familia = null) => {
+    setModalLoading(true);
+    try {
+      setEditingFamilia(familia);
+
+      if (!usersLoaded) {
+        await fetchUsers();
+        setUsersLoaded(true);
+      }
+
+      reset({
+        nome: familia?.nome || "",
+        representante: familia?.representante || "",
+        qtdMembros: familia?.qtdMembros || 1,
+        descricao: familia?.descricao || "",
+        gestorId: familia?.gestorId || "",
       });
+
+      modalRef.current?.open();
+    } catch {
+      toast.error("Erro ao preparar formulário");
+    } finally {
+      setModalLoading(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    const map = {
-      active: "badge-success",
-      inactive: "badge-error",
-      pending: "badge-warning",
-    };
+  const gestores = users.filter((u) => u.role === "gestor");
+  const usuarios = users.filter((u) =>
+    ["cultivador", "voluntario"].includes(u.role)
+  );
+
+  // Se for gestor, mostra só suas famílias
+  const visibleFamilias =
+    user.role === "gestor"
+      ? familias.filter((f) => f.gestorId === user.id)
+      : familias;
+
+  const filteredFamilias = visibleFamilias.filter((f) => {
+    const query = searchQuery.toLowerCase();
     return (
-      <span className={`badge ${map[status] || "badge-neutral"} text-xs`}>
-        {status}
-      </span>
+      f.nome?.toLowerCase().includes(query) ||
+      f.representante?.toLowerCase().includes(query)
     );
+  });
+
+  const handleSaveFamilia = async (data) => {
+    try {
+      const payload = {
+        ...data,
+        gestorId: user.role === "gestor" ? user.id : data.gestorId,
+      };
+
+      if (editingFamilia) {
+        await updateFamilia(editingFamilia.id, payload);
+      } else {
+        await createFamilia(payload);
+      }
+
+      await fetchFamilias();
+      modalRef.current?.close();
+      setEditingFamilia(null);
+      toast.success("Família salva com sucesso!");
+    } catch (err) {
+      console.error("Erro ao salvar família:", err);
+      toast.error("Erro ao salvar família.");
+    }
   };
 
+  const handleDeleteFamilia = async (id) => {
+    if (!window.confirm("Tem certeza que deseja excluir esta família?")) return;
+    try {
+      await deleteFamilia(id);
+      await fetchFamilias();
+      toast.success("Família removida.");
+    } catch {
+      toast.error("Erro ao excluir família.");
+    }
+  };
+
+  const totalFamilias = familias.length;
+  const mediaMembros =
+    totalFamilias > 0
+      ? Math.round(
+          familias.reduce((acc, f) => acc + (f.qtdMembros || 0), 0) /
+            totalFamilias
+        )
+      : 0;
+  const gestoresComFamilias = [
+    ...new Set(familias.map((f) => f.gestor?.id).filter(Boolean)),
+  ].length;
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setViewMode("cards");
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleSidebarToggle = (e) => {
+      const sidebarOpenState = e.detail;
+      setSidebarOpen(sidebarOpenState);
+
+      const isMedium = window.innerWidth < 1024;
+
+      if (!sidebarOpenState && !isMobile) setViewMode("table");
+      if (sidebarOpenState && isMedium) setViewMode("cards");
+    };
+
+    window.addEventListener("sidebar-toggle", handleSidebarToggle);
+    return () =>
+      window.removeEventListener("sidebar-toggle", handleSidebarToggle);
+  }, [isMobile]);
+
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 relative">
+      <LoadingOverlay loading={loading} message="Carregando famílias..." />
+      <LoadingOverlay
+        loading={modalLoading}
+        message="Preparando formulário..."
+      />
+
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-base-content">
-            Gerenciamento de Famílias
-          </h1>
+          <h1 className="text-3xl font-bold text-base-content">Famílias</h1>
           <p className="text-base-content/70 mt-1">
-            Gerencie todas as famílias participantes da sua horta comunitária.
+            Gerencie as famílias participantes da horta comunitária.
           </p>
         </div>
-        <button
-          className="btn btn-primary w-full sm:w-auto flex items-center gap-2"
-          onClick={handleAddFamily}
-        >
-          <UserPlus className="h-4 w-4" /> Adicionar Família
-        </button>
+
+        {(user?.role === "admin" || user?.role === "gestor") && (
+          <Button onClick={() => handleOpenModal(null)} icon={Plus}>
+            Adicionar Família
+          </Button>
+        )}
       </div>
 
-      {/* Stats */}
-      <ResponsiveGrid>
-        <StatCard
-          title="Total de Famílias"
-          value={familyStats.totalFamilies}
-          icon={<Users className="h-6 w-6" />}
-        />
-        <StatCard
-          title="Famílias Ativas"
-          value={familyStats.activeFamilies}
-          description={`${Math.round(
-            (familyStats.activeFamilies / familyStats.totalFamilies) * 100
-          )}% do total`}
-          icon={<UserCheck className="h-6 w-6" />}
-        />
-        <StatCard
-          title="Horas Contribuídas"
-          value={`${familyStats.totalHours}h`}
-          description={`Média por ativa: ${
-            familyStats.activeFamilies > 0
-              ? (familyStats.totalHours / familyStats.activeFamilies).toFixed(1)
-              : 0
-          }h`}
-          icon={<Clock className="h-6 w-6" />}
-        />
-        <StatCard
-          title="Pontuação Média"
-          value={`${familyStats.avgParticipation}%`}
-          icon={<Award className="h-6 w-6" />}
-        />
-      </ResponsiveGrid>
+      {/* Estatísticas */}
+      {!loading && (
+        <>
+          <ResponsiveGrid columns={user.role === "admin" ? 3 : 2}>
+            <StatCard
+              title="Total"
+              value={totalFamilias.toString()}
+              description="Famílias cadastradas"
+              icon={<Users className="h-6 w-6" />}
+            />
+            <StatCard
+              title="Média de Membros"
+              value={mediaMembros.toString()}
+              description="Por família"
+              icon={<UserCheck className="h-6 w-6" />}
+            />
+            {user.role === "admin" && (
+              <StatCard
+                title="Gestores Ativos"
+                value={gestoresComFamilias.toString()}
+                description="Com famílias vinculadas"
+                icon={<Award className="h-6 w-6" />}
+              />
+            )}
+          </ResponsiveGrid>
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        <div className="flex items-center gap-2 flex-1 px-4 py-2 border border-base-300 rounded-lg bg-base-100">
-          <Search className="h-4 w-4 text-primary/70" />
-          <input
-            type="text"
-            className="grow bg-transparent focus:outline-none"
-            placeholder="Buscar por nome ou email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <select
-          className="select select-bordered w-full sm:w-[180px] rounded-lg"
-          value={statusFilter || ""}
-          onChange={(e) => setStatusFilter(e.target.value || null)}
-        >
-          <option value="">Filtrar por status</option>
-          <option value="active">Ativas</option>
-          <option value="inactive">Inativas</option>
-          <option value="pending">Pendentes</option>
-        </select>
-      </div>
+          {/* Filtro */}
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex items-center gap-2 px-4 py-2 border border-base-300 rounded-lg shadow-sm bg-base-100 w-full">
+              <Search className="h-4 w-4 text-primary/70" />
+              <input
+                type="text"
+                className="grow bg-transparent focus:outline-none text-base-content"
+                placeholder="Buscar por nome ou representante..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
 
-      {/* Tabs */}
-      <div className="flex justify-start gap-2 mb-4">
-        <button
-          className={`btn btn-sm ${
-            viewMode === "table" ? "btn-primary" : "btn-outline border-base-300"
-          }`}
-          onClick={() => setViewMode("table")}
-        >
-          <Table className="h-4 w-4 mr-1" /> Tabela
-        </button>
-        <button
-          className={`btn btn-sm ${
-            viewMode === "cards" ? "btn-primary" : "btn-outline border-base-300"
-          }`}
-          onClick={() => setViewMode("cards")}
-        >
-          <LayoutGrid className="h-4 w-4 mr-1" /> Cards
-        </button>
-      </div>
+          {/* Alternância de visualização */}
+          <div className="flex justify-start gap-2 mb-4">
+            <button
+              className={`btn btn-sm ${
+                viewMode === "table"
+                  ? "btn-primary"
+                  : "btn-outline border-base-300"
+              }`}
+              onClick={() => setViewMode("table")}
+              disabled={isMobile || sidebarOpen}
+            >
+              <Table className="h-4 w-4 mr-1" /> Tabela
+            </button>
+            <button
+              className={`btn btn-sm ${
+                viewMode === "cards"
+                  ? "btn-primary"
+                  : "btn-outline border-base-300"
+              }`}
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" /> Cards
+            </button>
+          </div>
 
-      {/* Conteúdo */}
-      {viewMode === "table" ? (
-        <div className="overflow-x-auto hidden md:block">
-          <table className="table w-full table-zebra">
-            <thead>
-              <tr>
-                {[
-                  "Nome",
-                  "Membros",
-                  "Entrada",
-                  "Status",
-                  "Pontuação",
-                  "Última Atividade",
-                  "Ações",
-                ].map((col) => (
-                  <th
-                    key={col}
-                    className="bg-base-200 text-xs uppercase font-semibold tracking-wider"
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFamilies.length > 0 ? (
-                filteredFamilies.map((f) => (
-                  <tr key={f.id}>
-                    <td>
-                      <div className="font-semibold">{f.name}</div>
-                      <div className="text-sm opacity-50">{f.email}</div>
-                    </td>
-                    <td>{f.members}</td>
-                    <td>{new Date(f.joinDate).toLocaleDateString("pt-BR")}</td>
-                    <td>{getStatusBadge(f.status)}</td>
-                    <td className="flex items-center gap-1">
-                      <span className="font-semibold">
-                        {f.participationScore}
-                      </span>
-                      <Award className="h-4 w-4 text-primary" />
-                    </td>
-                    <td>
-                      {new Date(f.lastActivity).toLocaleDateString("pt-BR")}
-                    </td>
-                    <td className="flex gap-2 justify-end">
+          {/* Renderização */}
+          {viewMode === "table" ? (
+            <div className="overflow-x-auto shadow-xl rounded-xl border border-base-200">
+              <div className="hidden md:block">
+                <table className="table w-full table-zebra table-fixed whitespace-normal break-words">
+                  <thead>
+                    <tr>
+                      {[
+                        "Nome",
+                        "Representante",
+                        "Membros",
+                        user?.role === "admin" && "Gestor",
+                        "Descrição",
+                        "Ações",
+                      ]
+                        .filter(Boolean)
+                        .map((col) => (
+                          <th
+                            key={col}
+                            className="text-xs uppercase font-semibold tracking-wider whitespace-normal break-words text-center"
+                          >
+                            {col}
+                          </th>
+                        ))}
+                    </tr>
+                  </thead>
+                  <tbody className="text-center">
+                    {filteredFamilias.length > 0 ? (
+                      filteredFamilias.map((f) => (
+                        <tr
+                          key={f.id}
+                          className="hover:bg-base-100/50 transition-colors text-center"
+                        >
+                          <td className="align-middle">{f.nome}</td>
+                          <td className="align-middle">{f.representante}</td>
+                          <td className="align-middle">{f.qtdMembros}</td>
+                          {user.role === "admin" && (
+                            <td className="align-middle">
+                              {f.gestor?.nome || "-"}
+                            </td>
+                          )}
+                          <td className="align-middle">{f.descricao || "-"}</td>
+                          <td className="align-middle">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <button
+                                className="btn btn-ghost btn-sm text-info/80 hover:text-info"
+                                onClick={() => "#"}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-sm text-secondary/80 hover:text-primary"
+                                onClick={() => handleOpenModal(f)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              {(user.role === "admin" ||
+                                user.role === "gestor") && (
+                                <button
+                                  className="btn btn-ghost btn-sm text-error/80 hover:text-error"
+                                  onClick={() => handleDeleteFamilia(f.id)}
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={user.role === "admin" ? 6 : 5}
+                          className="py-6 text-base-content/60 italic"
+                        >
+                          Nenhuma família encontrada.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredFamilias.map((f) => (
+                <div
+                  key={f.id}
+                  className="p-4 border border-base-200 rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
+                >
+                  <div className="absolute top-2 right-2 flex flex-col gap-1">
+                    <button
+                      className="btn btn-ghost btn-sm text-primary/80 hover:text-primary"
+                      onClick={() => handleOpenModal(f)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    {(user.role === "admin" || user.role === "gestor") && (
                       <button
-                        className="btn btn-ghost btn-sm"
-                        onClick={() => handleEditFamily(f)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm text-error"
-                        onClick={() => handleDeleteFamily(f.id)}
+                        className="btn btn-ghost btn-sm text-error/80 hover:text-error"
+                        onClick={() => handleDeleteFamilia(f.id)}
                       >
                         <Trash className="h-4 w-4" />
                       </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="text-center py-6 text-base-content/60 italic"
-                  >
-                    Nenhuma família encontrada com os filtros aplicados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredFamilies.length > 0 ? (
-            filteredFamilies.map((f) => (
-              <div
-                key={f.id}
-                className="p-4 border border-base-200 rounded-lg shadow-sm flex flex-col gap-2 relative"
-              >
-                <div className="absolute top-2 right-2 flex flex-col gap-1">
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => handleEditFamily(f)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm text-error"
-                    onClick={() => handleDeleteFamily(f.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </button>
+                    )}
+                  </div>
+
+                  <div className="font-bold text-lg flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary/70" />
+                    {f.nome}
+                  </div>
+                  <div className="text-xs opacity-60">
+                    Representante: {f.representante}
+                  </div>
+                  <div className="mt-2">
+                    <Badge type="info">{f.qtdMembros} membros</Badge>
+                  </div>
+                  {user.role === "admin" && f.gestor && (
+                    <div className="mt-1 text-xs opacity-60">
+                      Gestor:{" "}
+                      <span className="font-medium">{f.gestor.nome}</span>
+                    </div>
+                  )}
+                  {f.descricao && (
+                    <p className="mt-2 text-sm text-base-content/70 truncate">
+                      {f.descricao}
+                    </p>
+                  )}
                 </div>
-                <div className="font-bold text-lg">{f.name}</div>
-                <div className="text-xs opacity-60">{f.email}</div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <span className="badge badge-ghost">{f.members} membros</span>
-                  {getStatusBadge(f.status)}
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  <Award className="h-4 w-4 text-primary" />
-                  <span className="font-semibold">{f.participationScore}</span>
-                </div>
-                <div className="text-xs opacity-50 mt-1">
-                  Última atividade:{" "}
-                  {new Date(f.lastActivity).toLocaleDateString("pt-BR")}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-6 text-base-content/60 italic">
-              Nenhuma família encontrada com os filtros aplicados.
+              ))}
             </div>
           )}
-        </div>
+
+          {/* Modal */}
+          {(user?.role === "admin" || user?.role === "gestor") && (
+            <FormModal
+              ref={modalRef}
+              title={
+                editingFamilia ? "Editar Família" : "Adicionar Nova Família"
+              }
+              onSubmit={handleSubmit(handleSaveFamilia)}
+              submitLabel={editingFamilia ? "Salvar Alterações" : "Criar"}
+            >
+              <FormField
+                type="input"
+                placeholder="Nome da Família"
+                name="nome"
+                control={control}
+              />
+              <FormField
+                type="searchable-select"
+                placeholder="Nome do Representante"
+                name="representante"
+                control={control}
+                options={usuarios.map((u) => ({
+                  value: u.nome,
+                  label: u.nome,
+                }))}
+              />
+              <FormField
+                type="number"
+                placeholder="Quantidade de Membros"
+                name="qtdMembros"
+                control={control}
+              />
+              <FormField
+                type="textarea"
+                placeholder="Descrição (opcional)"
+                name="descricao"
+                control={control}
+              />
+              {user?.role === "admin" && (
+                <FormField
+                  type="searchable-select"
+                  placeholder="Selecione o Gestor"
+                  name="gestorId"
+                  control={control}
+                  options={gestores.map((g) => ({
+                    value: g.id,
+                    label: g.nome || g.username,
+                  }))}
+                />
+              )}
+            </FormModal>
+          )}
+
+          {/* Botão Flutuante */}
+          {(user?.role === "admin" || user?.role === "gestor") && (
+            <FloatingButton
+              onClick={() => handleOpenModal(null)}
+              tooltip="Adicionar Família"
+              icon={<Plus className="h-6 w-6 md:h-7 md:w-7" />}
+            />
+          )}
+        </>
       )}
     </div>
   );
 };
 
-export default FamiliesManager;
+export default Familias;

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import {
   Home,
@@ -21,6 +21,23 @@ import { useUserStore } from "@/stores/useUserStore";
 const Sidebar = ({ user, isOpen, onToggle }) => {
   const { logout } = useUserStore((state) => state);
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1024px)");
+    setIsMobile(mediaQuery.matches);
+
+    const handleResize = (e) => setIsMobile(e.matches);
+    mediaQuery.addEventListener("change", handleResize);
+
+    return () => mediaQuery.removeEventListener("change", handleResize);
+  }, []);
+
+    const handleLinkClick = () => {
+    if (isMobile && isOpen) {
+      onToggle?.();
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -85,7 +102,7 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  onClick={onToggle}
+                  onClick={handleLinkClick}
                   className={({ isActive }) =>
                     `flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
                       isActive

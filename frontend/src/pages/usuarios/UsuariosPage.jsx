@@ -21,9 +21,7 @@ import {
   Table,
   LayoutGrid,
 } from "lucide-react";
-import usuarioSchemaCreate, {
-  usuarioSchemaUpdate,
-} from "@/lib/validation/usuarioSchema";
+import { usuarioSchemaUpdate } from "@/lib/validation/usuarioSchema";
 
 const Usuarios = () => {
   const {
@@ -66,17 +64,21 @@ const Usuarios = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter((u) => {
-    const query = searchQuery.toLowerCase();
-    const visibleToGestor =
-      user?.role === "admin" ||
-      (user?.role === "gestor" && u.familia && u.familia.gestorId === user?.id);
-    const matchesQuery =
-      u.nome?.toLowerCase().includes(query) ||
-      u.email?.toLowerCase().includes(query) ||
-      u.username?.toLowerCase().includes(query);
-    return visibleToGestor && matchesQuery;
-  });
+  const filteredUsers = users
+    .filter((u) => u && typeof u === "object") // garante que não é undefined
+    .filter((u) => {
+      const query = searchQuery.toLowerCase();
+      const visibleToGestor =
+        user?.role === "admin" ||
+        (user?.role === "gestor" &&
+          u.familia &&
+          u.familia.gestorId === user?.id);
+      const matchesQuery =
+        u.nome?.toLowerCase().includes(query) ||
+        u.email?.toLowerCase().includes(query) ||
+        u.username?.toLowerCase().includes(query);
+      return visibleToGestor && matchesQuery;
+    });
 
   const handleOpenModal = async (userData = null) => {
     setEditingUser(userData);
@@ -101,7 +103,6 @@ const Usuarios = () => {
   };
 
   const handleSaveUser = async (data) => {
-    console.log("Salvar usuário:", data);
     try {
       if (editingUser) {
         await updateUser(editingUser.id, data);

@@ -19,8 +19,6 @@ import LoadingOverlay from "../../components/ui/LoadingOverlay";
 const DashboardPage = () => {
   const user = useUserStore((state) => state.user);
 
-  console.log(user);
-
   if (!user)
     return (
       <LoadingOverlay loading={true} message="Carregando dados do usuário..." />
@@ -110,7 +108,7 @@ const DashboardPage = () => {
               perfil para aproveitar todas as funcionalidades.
             </p>
           </div>
-          <Link to="/perfil" className="btn btn-sm btn-warning ml-auto">
+          <Link to="/onboarding" className="btn btn-sm btn-warning ml-auto">
             Completar agora
           </Link>
         </div>

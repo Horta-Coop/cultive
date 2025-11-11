@@ -5,6 +5,7 @@ import {
   getUser,
   updateUser,
   createUserByAdmin,
+  completeUserOnboarding,
 } from "../controllers/usuario.controller.js";
 
 const router = express.Router();
@@ -20,6 +21,10 @@ router.put("/:id", protectRoute, allowRoles("gestor", "admin"), updateUser);
 
 // Criar usuário pelo admin
 router.post("/", protectRoute, allowRoles("admin"), createUserByAdmin);
+
+
+// Completa o perfil
+router.post("/onboarding", protectRoute, completeUserOnboarding);
 
 // Deletar usuário
 //router.delete("/:id", protectRoute, allowRoles("admin"), deleteUser);

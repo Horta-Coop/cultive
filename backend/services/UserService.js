@@ -2,6 +2,14 @@ import { FamiliaRepository } from "../repositories/FamiliaRepository.js";
 import { UserRepository } from "../repositories/UserRepository.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
+import { completeUserOnboarding } from "../controllers/usuario.controller.js";
+import {
+  baseSchema,
+  profileAdminSchema,
+  profileCultivadorSchema,
+  profileGestorSchema,
+  profileVoluntarioSchema,
+} from "../schemas/user.schema.js";
 
 export const UserService = {
   getAllUsers: async (params = {}) => {
@@ -167,5 +175,62 @@ export const UserService = {
       resetTokenExpiry: expires,
     });
     return token;
+  },
+
+  completeOnboarding: async (userId, data) => {
+    const user = await UserRepository.findById(userId);
+    if (!user) throw new Error("Usuário não encontrado");
+
+    if (user.onBoarding) throw new Error("Onboarding já foi concluído");
+
+    // Define schema específico conforme o tipo de usuário
+    let specificSchema;
+    switch (user.role) {
+      case "gestor":
+        specificSchema = profileGestorSchema;
+        break;
+
+      case "cultivador":
+        specificSchema = profileCultivadorSchema;
+        break;
+
+      case "voluntario":
+        specificSchema = profileVoluntarioSchema;
+        break;
+
+      case "admin":
+        specificSchema = profileAdminSchema;
+        break;
+
+      default:
+        throw new Error("Tipo de usuário inválido para onboarding");
+    }
+
+    // Faz merge dos schemas
+    const fullSchema = baseSchema.merge(specificSchema);
+    const result = fullSchema.safeParse(data);
+
+    if (!result.success) {
+      throw new Error(
+        "Erro de validação: " + JSON.stringify(result.error.format())
+      );
+    }
+
+    const parsed = result.data;
+
+    // Atualiza campos básicos
+    await UserRepository.updateUser(userId, {
+      telefone: parsed.telefone,
+      endereco: parsed.endereco,
+      pictureUrl: parsed.pictureUrl,
+      onBoarding: true,
+    });
+
+    // Cria o perfil específico
+    await UserRepository.createProfileByRole(user.role, userId, parsed);
+
+    // Retorna usuário atualizado
+    const updated = await UserRepository.findById(userId);
+    return updated;
   },
 };

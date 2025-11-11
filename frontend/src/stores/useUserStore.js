@@ -58,23 +58,57 @@ export const useUserStore = create(
 
       checkAuth: async (silent = false) => {
         set({ checkinAuth: true });
+
         try {
-          const res = await axios.get("/auth/me", { silent: silent });
+          const res = await axios.get("/auth/me", { silent });
+
           set({ user: res.data.user, checkinAuth: false });
-        } catch {
-          set({ checkinAuth: false, user: null });
+        } catch (error) {
+          set({ user: null, checkinAuth: false });
+
+          const code = error?.response?.data?.code;
+          if (
+            !silent &&
+            [
+              "NO_TOKEN",
+              "TOKEN_EXPIRED",
+              "INVALID_TOKEN",
+              "USER_NOT_FOUND",
+            ].includes(code)
+          ) {
+            toast.error(
+              error.response?.data?.message || "Faça login novamente"
+            );
+            window.location.href = "/login";
+            return;
+          }
+
+          if (!silent) {
+            console.warn("Erro ao verificar autenticação:", error?.message);
+          }
         }
       },
 
       forgotPassword: async (email) => {
         set({ loading: true });
+
+        if (!email) {
+          toast.error("Email obrigatório");
+          set({ loading: false });
+          return false;
+        }
+
         try {
           const res = await axios.post("/auth/forgot-password", { email });
           toast.success(res.data.message);
-        } catch (error) {
-          toast.error(error?.response?.data?.message || "Erro ao enviar email");
-        } finally {
           set({ loading: false });
+          return true;
+        } catch (error) {
+          toast.error(
+            error?.response?.data?.message || "Erro ao redefinir senha"
+          );
+          set({ loading: false });
+          return false;
         }
       },
 
@@ -84,7 +118,7 @@ export const useUserStore = create(
         if (!token || !newPassword) {
           toast.error("Token e nova senha são obrigatórios");
           set({ loading: false });
-          return;
+          return false;
         }
 
         try {
@@ -93,12 +127,14 @@ export const useUserStore = create(
             newPassword,
           });
           toast.success(res.data.message || "Senha redefinida com sucesso!");
+          set({ loading: false });
+          return true;
         } catch (error) {
           toast.error(
             error?.response?.data?.message || "Erro ao redefinir senha"
           );
-        } finally {
           set({ loading: false });
+          return false;
         }
       },
 
@@ -142,7 +178,9 @@ export const useUserStore = create(
             pictureUrl: data.pictureUrl || null,
           };
           const res = await axios.post("/user/", payload);
-          const novoUsuario = res.data.usuario;
+          const novoUsuario = res.data.user;
+
+          console.log("Novo usuário recebido:", novoUsuario);
 
           set({
             users: [...get().users, novoUsuario],
@@ -160,8 +198,19 @@ export const useUserStore = create(
       updateUser: async (id, data) => {
         set({ loading: true });
         try {
-          const res = await axios.put(`/user/${id}`, data);
+          const payload = {
+            nome: data.name,
+            username: data.username,
+            email: data.email,
+            telefone: data.telefone || null,
+            endereco: data.endereco || null,
+            familiaId: data.familiaId || null,
+            role: data.role || "cultivador",
+            pictureUrl: data.pictureUrl || null,
+          };
+          const res = await axios.put(`/user/${id}`, payload);
           const updatedUser = res.data.usuario;
+
           const users = get().users.map((u) => (u.id === id ? updatedUser : u));
           set({ selectedUser: updatedUser, users, loading: false });
           toast.success("Usuário atualizado com sucesso");
@@ -170,6 +219,22 @@ export const useUserStore = create(
           toast.error(
             error?.response?.data?.message || "Erro ao atualizar usuário"
           );
+        }
+      },
+
+      completeOnboarding: async (data) => {
+        set({ loading: true });
+        try {
+          const res = await axios.post("/user/onboarding", data);
+          set({ user: res.data.user, loading: false });
+          toast.success("Perfil completado com sucesso!");
+          return true;
+        } catch (error) {
+          set({ loading: false });
+          toast.error(
+            error?.response?.data?.message || "Erro ao completar o perfil"
+          );
+          return false;
         }
       },
 

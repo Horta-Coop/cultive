@@ -61,4 +61,55 @@ export const UserRepository = {
       data,
     });
   },
+
+  createProfileByRole: async (role, usuarioId, data) => {
+    switch (role) {
+      case "gestor":
+        return await prisma.perfilGestor.create({
+          data: {
+            usuarioId,
+            cargo: data.cargo,
+            organizacaoVinculada: data.organizacaoVinculada,
+            recebeAlertas: data.recebeAlertas ?? true,
+            observacoes: data.observacoes,
+          },
+        });
+
+      case "cultivador":
+        return await prisma.perfilCultivador.create({
+          data: {
+            usuarioId,
+            tipoExperiencia: data.tipoExperiencia,
+            habilidades: data.habilidades,
+            plantasFavoritas: data.plantasFavoritas,
+            observacoes: data.observacoes,
+          },
+        });
+
+      case "voluntario":
+        return await prisma.perfilVoluntario.create({
+          data: {
+            usuarioId,
+            interesse: data.interesse,
+            disponivel: data.disponivel ?? true,
+            observacoes: data.observacoes,
+          },
+        });
+
+      case "admin":
+        return await prisma.perfilAdmin.create({
+          data: {
+            usuarioId,
+            cargo: data.cargo,
+            ativo: data.ativo ?? true,
+            observacoes: data.observacoes,
+          },
+        });
+
+      default:
+        throw new Error(
+          `Role "${role}" não reconhecida para criação de perfil`
+        );
+    }
+  },
 };

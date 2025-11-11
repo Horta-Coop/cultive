@@ -44,7 +44,6 @@ export const getUser = async (req, res) => {
   }
 };
 
-// Atualizar usuário
 export const updateUser = async (req, res) => {
   const body = req.body;
   const result = usuarioSchema.safeParse(body);
@@ -73,7 +72,6 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// Criar usuário pelo admin
 export const createUserByAdmin = async (req, res) => {
   try {
     if (req.user.role !== "admin") {
@@ -111,7 +109,6 @@ export const createUserByAdmin = async (req, res) => {
     });
 
     // Cria token de reset
-    console.log(user);
     const resetToken = await UserService.createResetToken(user.id);
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
@@ -126,5 +123,22 @@ export const createUserByAdmin = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+export const completeUserOnboarding = async (req, res) => {
+  try {
+    const userId = req.user.id; // vem do token JWT
+    const body = req.body;
+
+    const updatedUser = await UserService.completeOnboarding(userId, body);
+
+    return res.json({
+      message: "Perfil completado com sucesso!",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Erro no onboarding:", error);
+    return res.status(400).json({ message: error.message });
   }
 };

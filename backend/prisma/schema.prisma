@@ -104,7 +104,7 @@ model Horta {
   tipoHorta     EHorta
   observacoes   String?
   familiaId     String?
-  cordenada     String?
+  coordenada     String?
   descricao     String?
   endereco      String
   gestorId      String?

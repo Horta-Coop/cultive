@@ -12,7 +12,7 @@ const PublicRoute = () => {
   }, []);
 
   if (checkinAuth) {
-    return <LoadingOverlay message="Verificando autenticação..." loading={true} />;
+    return <LoadingOverlay message="Verificando autenticação..." loading />;
   }
 
   if (user) {

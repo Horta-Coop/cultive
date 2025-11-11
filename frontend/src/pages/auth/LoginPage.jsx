@@ -65,7 +65,7 @@ const LoginPage = () => {
               {/* Password */}
               <div className="md:col-span-2 flex flex-col space-y-1">
                 <div className="flex justify-end text-xs text-primary hover:underline">
-                  <Link to="/esqueceu-senha">Esqueceu a senha?</Link>
+                  <Link to="/forgot-password">Esqueceu a senha?</Link>
                 </div>
                 <FormField
                   name="password"

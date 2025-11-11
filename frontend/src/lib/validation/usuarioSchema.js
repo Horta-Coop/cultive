@@ -77,4 +77,42 @@ export const usuarioSchemaUpdate = z.object({
   onBoarding: z.boolean().optional(),
 });
 
+const baseSchema = z.object({
+  nome: z.string().min(3, "Nome muito curto"),
+  telefone: z.string().regex(/^\d{10,11}$/, "Telefone inválido"),
+  endereco: z.string().min(5, "Endereço muito curto"),
+});
+
+// Perfis específicos
+const gestorSchema = baseSchema.extend({
+  role: z.literal("gestor"),
+  cargo: z.string().min(2, "Cargo obrigatório"),
+  organizacaoVinculada: z.string().min(2, "Organização obrigatória"),
+  recebeAlertas: z.boolean().optional(),
+});
+
+const voluntarioSchema = baseSchema.extend({
+  role: z.literal("voluntario"),
+  interesse: z.string().min(2, "Área de interesse obrigatória"),
+  disponivel: z.boolean().optional(),
+});
+
+const cultivadorSchema = baseSchema.extend({
+  role: z.literal("cultivador"),
+  tipoExperiencia: z.string().min(2, "Experiência obrigatória"),
+  habilidades: z.string().min(2, "Habilidades obrigatórias"),
+});
+
+const adminSchema = baseSchema.extend({
+  role: z.literal("admin"),
+  cargo: z.string().min(2, "Cargo obrigatório"),
+});
+
+export const onboardingSchema = z.discriminatedUnion("role", [
+  gestorSchema,
+  voluntarioSchema,
+  cultivadorSchema,
+  adminSchema,
+]);
+
 export default usuarioSchemaCreate;

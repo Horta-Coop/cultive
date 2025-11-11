@@ -29,6 +29,7 @@ import { useHortaStore } from "@/stores/useHortaStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { useFamiliaStore } from "@/stores/useFamiliaStore";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import { EHortaEnum } from "../../lib/validation/hortaSchema";
 
 const GardenPage = () => {
   const { user, checkinAuth, fetchUsers, users } = useUserStore(
@@ -36,7 +37,6 @@ const GardenPage = () => {
   );
   const { hortas, fetchHortas, createHorta, updateHorta, deleteHorta } =
     useHortaStore((state) => state);
-
   const { familias, fetchFamilias } = useFamiliaStore((state) => state);
 
   const navigate = useNavigate();
@@ -102,10 +102,7 @@ const GardenPage = () => {
     });
   }, [hortas, searchQuery, typeFilter]);
 
-  const uniqueHortaTypes = useMemo(
-    () => [...new Set(hortas.map((h) => h.tipoHorta))],
-    [hortas]
-  );
+  const uniqueHortaTypes = useMemo(() => EHortaEnum.options, []);
 
   const handleOpenModal = async (horta = null) => {
     setModalLoading(true);
@@ -243,26 +240,94 @@ const GardenPage = () => {
         <div>
           {/* Stats */}
           <ResponsiveGrid columns={3}>
-            <StatCard
-              title="Hortas Totais"
-              value={hortas.length.toString()}
-              description="Hortas cadastradas"
-              icon={<LayoutGrid className="h-6 w-6" />}
-            />
-            <StatCard
-              title="Área Total"
-              value={`${hortas
-                .reduce((acc, h) => acc + h.areaCultivada, 0)
-                .toFixed(1)} m²`}
-              description="Área total cultivada"
-              icon={<Sprout className="h-6 w-6" />}
-            />
-            <StatCard
-              title="Gestores Únicos"
-              value={new Set(hortas.map((h) => h.gestor.nome)).size.toString()}
-              description="Gestores cadastrados"
-              icon={<Tractor className="h-6 w-6" />}
-            />
+            {user?.role === "admin" && (
+              <>
+                <StatCard
+                  title="Hortas Totais"
+                  value={hortas.length.toString()}
+                  description="Hortas cadastradas no sistema"
+                  icon={<LayoutGrid className="h-6 w-6" />}
+                />
+                <StatCard
+                  title="Área Total Cultivada"
+                  value={`${hortas
+                    .reduce((acc, h) => acc + h.areaCultivada, 0)
+                    .toFixed(1)} m²`}
+                  description="Somatório da área de todas as hortas"
+                  icon={<Sprout className="h-6 w-6" />}
+                />
+                <StatCard
+                  title="Gestores Ativos"
+                  value={new Set(
+                    hortas.map((h) => h.gestor.nome)
+                  ).size.toString()}
+                  description="Gestores com hortas registradas"
+                  icon={<Tractor className="h-6 w-6" />}
+                />
+              </>
+            )}
+
+            {user?.role === "gestor" && (
+              <>
+                <StatCard
+                  title="Minhas Hortas"
+                  value={hortas.length.toString()}
+                  description="Hortas sob minha gestão"
+                  icon={<LayoutGrid className="h-6 w-6" />}
+                />
+                <StatCard
+                  title="Área Cultivada Total"
+                  value={`${hortas
+                    .reduce((acc, h) => acc + h.areaCultivada, 0)
+                    .toFixed(1)} m²`}
+                  description="Soma das áreas das suas hortas"
+                  icon={<Sprout className="h-6 w-6" />}
+                />
+                <StatCard
+                  title="Média por Horta"
+                  value={`${(
+                    hortas.reduce((acc, h) => acc + h.areaCultivada, 0) /
+                    (hortas.length || 1)
+                  ).toFixed(1)} m²`}
+                  description="Média da área cultivada por horta"
+                  icon={<AreaChart className="h-6 w-6" />}
+                />
+              </>
+            )}
+
+            {["cultivador", "voluntario"].includes(user?.role) && (
+              <>
+                <StatCard
+                  title="Hortas da Família"
+                  value={hortas.length.toString()}
+                  description="Hortas em que você atua"
+                  icon={<LayoutGrid className="h-6 w-6" />}
+                />
+                <StatCard
+                  title="Área Total Envolvida"
+                  value={`${hortas
+                    .reduce((acc, h) => acc + h.areaCultivada, 0)
+                    .toFixed(1)} m²`}
+                  description="Área total cultivada pela família"
+                  icon={<Sprout className="h-6 w-6" />}
+                />
+                <StatCard
+                  title="Tipo de Horta Mais Comum"
+                  value={
+                    hortas.length
+                      ? Object.entries(
+                          hortas.reduce((acc, h) => {
+                            acc[h.tipoHorta] = (acc[h.tipoHorta] || 0) + 1;
+                            return acc;
+                          }, {})
+                        ).sort((a, b) => b[1] - a[1])[0][0]
+                      : "—"
+                  }
+                  description="Tipo predominante entre suas hortas"
+                  icon={<LayoutGrid className="h-6 w-6" />}
+                />
+              </>
+            )}
           </ResponsiveGrid>
 
           {/* Filtros */}
@@ -286,7 +351,8 @@ const GardenPage = () => {
                 <option value="">Todos os Tipos</option>
                 {uniqueHortaTypes.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {type.charAt(0).toUpperCase() +
+                      type.slice(1).replace("_", " ")}
                   </option>
                 ))}
               </select>
@@ -328,19 +394,21 @@ const GardenPage = () => {
                       {[
                         "Horta",
                         "Tipo",
-                        "Gestor",
+                        user.role === "gestor" ? null : "Gestor",
                         "Área (m²)",
                         "Solo",
                         "Família",
                         "Ações",
-                      ].map((col) => (
-                        <th
-                          key={col}
-                          className="text-xs uppercase font-semibold tracking-wider whitespace-normal break-words text-center"
-                        >
-                          {col}
-                        </th>
-                      ))}
+                      ]
+                        .filter(Boolean)
+                        .map((col) => (
+                          <th
+                            key={col}
+                            className="text-xs uppercase font-semibold tracking-wider whitespace-normal break-words text-center"
+                          >
+                            {col}
+                          </th>
+                        ))}
                     </tr>
                   </thead>
                   <tbody className="text-center">
@@ -363,7 +431,11 @@ const GardenPage = () => {
                             </Badge>
                           </td>
 
-                          <td className="align-middle">{horta.gestor.nome}</td>
+                          {user.role === "admin" && (
+                            <td className="align-middle">
+                              {horta.gestor.nome}
+                            </td>
+                          )}
 
                           <td className="align-middle">
                             <div className="flex items-center justify-center gap-1">
@@ -619,15 +691,17 @@ const GardenPage = () => {
             />
             <FormField
               type="select"
-              placeholder="Tipo de Horta"
               name="tipoHorta"
               control={form.control}
-              options={[
-                { value: "Comunitária", label: "Comunitária" },
-                { value: "Familiar", label: "Familiar" },
-                { value: "Escolar", label: "Escolar" },
-              ]}
+              placeholder="Selecione o tipo de horta"
+              options={EHortaEnum.options.map((tipo) => ({
+                value: tipo,
+                label:
+                  tipo.charAt(0).toUpperCase() +
+                  tipo.slice(1).replace("_", " "),
+              }))}
             />
+
             <FormField
               type="textarea"
               placeholder="Descrição (opcional)"

@@ -9,11 +9,27 @@ export const useHortaStore = create(
     loading: false,
     error: null,
 
-    normalizeHorta: (horta) => ({
-      ...horta,
-      areaCultivada: Number(horta.areaCultivada) || 0,
-      coordenada: horta.coordenada || "",
-    }),
+    normalizeHorta: (horta) => {
+      let area = 0;
+
+      if (
+        typeof horta.areaCultivada === "object" &&
+        horta.areaCultivada !== null
+      ) {
+        area =
+          Number(horta.areaCultivada.d) ||
+          Number(horta.areaCultivada.$numberDecimal) ||
+          0;
+      } else {
+        area = Number(horta.areaCultivada) || 0;
+      }
+
+      return {
+        ...horta,
+        areaCultivada: area,
+        coordenada: horta.coordenada || "",
+      };
+    },
 
     fetchHortas: async () => {
       set({ loading: true, error: null });
