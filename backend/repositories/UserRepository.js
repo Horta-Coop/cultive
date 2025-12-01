@@ -41,7 +41,7 @@ export const UserRepository = {
     return await prisma.usuario.findMany(options);
   },
   findAllUsersByGestor: async (gestorId) => {
-    const familias = await FamiliaRepository.findFamilyByGestor(gestorId);
+    const familias = await FamiliaRepository.findByGestorId(gestorId);
     const familiaIds = familias.map((f) => f.id);
 
     return await prisma.usuario.findMany({

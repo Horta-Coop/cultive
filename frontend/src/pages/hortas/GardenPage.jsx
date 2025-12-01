@@ -30,26 +30,37 @@ import { useUserStore } from "@/stores/useUserStore";
 import { useFamiliaStore } from "@/stores/useFamiliaStore";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
 import { EHortaEnum } from "../../lib/validation/hortaSchema";
+import SmartDropdown from "../../components/ui/SmartDropdown";
 
 const GardenPage = () => {
-  const { user, checkinAuth, fetchUsers, users } = useUserStore(
-    (state) => state
-  );
-  const { hortas, fetchHortas, createHorta, updateHorta, deleteHorta } =
-    useHortaStore((state) => state);
-  const { familias, fetchFamilias } = useFamiliaStore((state) => state);
-
   const navigate = useNavigate();
   const modalRef = useRef(null);
 
-  const [editingHorta, setEditingHorta] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [viewMode, setViewMode] = useState(isMobile ? "cards" : "table");
-  const [loading, setLoading] = useState(true);
-  const [modalLoading, setModalLoading] = useState(false); // ⬅️ loading do modal
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState("");
+
+  const [loadingFamilias, setLoadingFamilias] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  const [modalLoading, setModalLoading] = useState(false);
+  const [editingHorta, setEditingHorta] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  const {
+    hortas,
+    fetchHortas,
+    createHorta,
+    updateHorta,
+    deleteHorta,
+    loading,
+  } = useHortaStore();
+
+  const { user, users, fetchUsers } = useUserStore();
+
+  const { familias, fetchFamilias } = useFamiliaStore();
 
   const form = useForm({
     resolver: zodResolver(hortaSchema),
@@ -66,29 +77,112 @@ const GardenPage = () => {
       familiaId: "",
     },
     mode: "all",
+    reValidateMode: "all",
   });
 
   const { reset } = form;
 
   useEffect(() => {
-    if (!user && !checkinAuth) {
-      navigate("/login");
-      return;
-    }
+    fetchHortas();
+  }, []);
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await fetchHortas();
-      } catch {
-        toast.error("Erro ao carregar hortas");
-      } finally {
-        setLoading(false);
-      }
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) setViewMode("cards");
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    const handleSidebarToggle = (e) => {
+      const sidebarOpenState = e.detail;
+      setSidebarOpen(sidebarOpenState);
+
+      const isMedium = window.innerWidth < 1024;
+
+      if (!sidebarOpenState && !isMobile) setViewMode("table");
+      if (sidebarOpenState && isMedium) setViewMode("cards");
     };
 
-    if (user) loadData();
-  }, [fetchHortas, user, navigate, checkinAuth]);
+    window.addEventListener("sidebar-toggle", handleSidebarToggle);
+    return () =>
+      window.removeEventListener("sidebar-toggle", handleSidebarToggle);
+  }, [isMobile]);
+
+  const handleOpenModal = async (horta = null) => {
+    setModalLoading(true);
+
+    try {
+      setEditingHorta(horta);
+
+      if (!familias || familias.length === 0) {
+        setLoadingFamilias(true);
+        await fetchFamilias();
+        setLoadingFamilias(false);
+      }
+
+      if (!users || users.length === 0) {
+        setLoadingUsers(true);
+        await fetchUsers(user?.role === "admin" ? { role: "gestor" } : {});
+        setLoadingUsers(false);
+      }
+
+      reset({
+        nome: horta?.nome || "",
+        endereco: horta?.endereco || "",
+        coordenada: horta?.coordenada || "",
+        areaCultivada: horta?.areaCultivada + "" || "",
+        tipoSolo: horta?.tipoSolo || "",
+        tipoHorta: horta?.tipoHorta || "",
+        descricao: horta?.descricao || "",
+        observacoes: horta?.observacoes || "",
+        gestorId: user?.role === "gestor" ? user.id : "",
+        familiaId: horta?.familia?.id || "",
+      });
+
+      modalRef.current?.open();
+    } catch (err) {
+      console.error("Erro ao preparar formulário:", err);
+      toast.error("Erro ao preparar formulário");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleSaveHorta = async (data) => {
+    setSaving(true);
+    try {
+      if (editingHorta) await updateHorta(editingHorta.id, data);
+      else await createHorta(data);
+
+      modalRef.current?.close();
+      setEditingHorta(null);
+    } catch (err) {
+      console.error("Erro ao salvar horta:", err);
+      toast.error("Erro ao salvar horta");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteHorta = async (id) => {
+    const confirm = window.confirm(
+      "Tem certeza que deseja deletar esta horta? Esta ação não pode ser desfeita."
+    );
+    if (!confirm) return;
+
+    try {
+      await deleteHorta(id);
+      toast.success("Horta deletada com sucesso!");
+    } catch (err) {
+      console.error("Erro ao deletar horta:", err);
+      toast.error("Erro ao deletar horta");
+    }
+  };
 
   const filteredHortas = useMemo(() => {
     return hortas.filter((h) => {
@@ -104,113 +198,18 @@ const GardenPage = () => {
 
   const uniqueHortaTypes = useMemo(() => EHortaEnum.options, []);
 
-  const handleOpenModal = async (horta = null) => {
-    setModalLoading(true);
-    try {
-      if (user?.role === "admin") {
-        await fetchUsers({ role: "gestor" });
-      }
-      await fetchFamilias();
-
-      if (horta) {
-        setEditingHorta(horta);
-      } else {
-        setEditingHorta({
-          nome: "",
-          endereco: "",
-          coordenada: "",
-          areaCultivada: "",
-          tipoSolo: "",
-          tipoHorta: "",
-          descricao: "",
-          observacoes: "",
-          gestorId: user?.role === "gestor" ? user.id : "",
-          familiaId: "",
-        });
-      }
-
-      modalRef.current?.open();
-    } catch (err) {
-      toast.error("Erro ao preparar formulário");
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleSaveHorta = async (data) => {
-    try {
-      if (editingHorta?.id) {
-        await updateHorta(editingHorta.id, data);
-        toast.success("Horta atualizada com sucesso!");
-      } else {
-        await createHorta(data);
-        toast.success("Horta criada com sucesso!");
-      }
-
-      await fetchHortas();
-      modalRef.current?.close();
-      setEditingHorta(null);
-    } catch (err) {
-      toast.error("Erro ao salvar horta");
-    }
-
-    reset();
-  };
-
-  const handleViewHorta = (id) => {
-    navigate(`/hortas/${id}`);
-  };
-
-  const handleDeleteHorta = async (id) => {
-    try {
-      await deleteHorta(id);
-      toast.success("Horta removida com sucesso!");
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Erro ao deletar horta");
-    }
-  };
-
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setViewMode("cards");
-      }
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    const handleSidebarToggle = (e) => {
-      const sidebarOpenState = e.detail;
-      setSidebarOpen(sidebarOpenState);
-
-      const isMedium = window.innerWidth < 1024;
-
-      if (!sidebarOpenState && !isMobile) {
-        setViewMode("table");
-      }
-
-      if (sidebarOpenState && isMedium) {
-        setViewMode("cards");
-      }
-    };
-
-    window.addEventListener("sidebar-toggle", handleSidebarToggle);
-    return () =>
-      window.removeEventListener("sidebar-toggle", handleSidebarToggle);
-  }, [isMobile, setViewMode]);
-
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 relative">
       <LoadingOverlay loading={loading} message="Carregando hortas..." />
       <LoadingOverlay
+        loading={loadingFamilias}
+        message="Carregando familias..."
+      />
+      <LoadingOverlay loading={loadingUsers} message="Carregando usuarios..." />
+      <LoadingOverlay
         loading={modalLoading}
         message="Preparando formulário..."
-      />{" "}
+      />
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
@@ -228,17 +227,9 @@ const GardenPage = () => {
           </Button>
         )}
       </div>
-      {loading && (
-        <div className="fixed inset-0 flex flex-col items-center justify-center bg-base-100/80 backdrop-blur-sm z-50">
-          <div className="loading loading-spinner loading-lg text-primary"></div>
-          <span className="text-lg text-base-content/70 mt-4">
-            Carregando hortas...
-          </span>
-        </div>
-      )}
+      {/* Estatísticas */}
       {!loading && (
-        <div>
-          {/* Stats */}
+        <>
           <ResponsiveGrid columns={3}>
             {user?.role === "admin" && (
               <>
@@ -329,295 +320,229 @@ const GardenPage = () => {
               </>
             )}
           </ResponsiveGrid>
-
-          {/* Filtros */}
-          <div className="flex flex-col gap-4 mb-6">
-            <div className="flex items-center gap-2 px-4 py-2 border border-base-300 rounded-lg shadow-sm bg-base-100 w-full">
-              <Search className="h-4 w-4 text-primary/70" />
-              <input
-                type="text"
-                className="grow bg-transparent focus:outline-none text-base-content"
-                placeholder="Buscar nome, endereço ou gestor..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                className="select select-bordered flex-1 w-full sm:w-auto rounded-lg"
-                value={typeFilter || ""}
-                onChange={(e) => setTypeFilter(e.target.value || "")}
-              >
-                <option value="">Todos os Tipos</option>
-                {uniqueHortaTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type.charAt(0).toUpperCase() +
-                      type.slice(1).replace("_", " ")}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex justify-start gap-2 mb-4">
-            <button
-              className={`btn btn-sm ${
-                viewMode === "table"
-                  ? "btn-primary"
-                  : "btn-outline border-base-300"
-              }`}
-              onClick={() => setViewMode("table")}
-              disabled={isMobile || sidebarOpen}
-            >
-              <Table className="h-4 w-4 mr-1" /> Tabela
-            </button>
-            <button
-              className={`btn btn-sm ${
-                viewMode === "cards"
-                  ? "btn-primary"
-                  : "btn-outline border-base-300"
-              }`}
-              onClick={() => setViewMode("cards")}
-            >
-              <LayoutGrid className="h-4 w-4 mr-1" /> Cards
-            </button>
-          </div>
-
-          {/* Tabela ou Cards */}
-          {viewMode === "table" ? (
-            <div className="overflow-x-auto shadow-xl rounded-xl border border-base-200">
-              <div className="hidden md:block">
-                <table className="table w-full table-zebra table-fixed whitespace-normal break-words">
-                  <thead>
-                    <tr>
-                      {[
-                        "Horta",
-                        "Tipo",
-                        user.role === "gestor" ? null : "Gestor",
-                        "Área (m²)",
-                        "Solo",
-                        "Família",
-                        "Ações",
-                      ]
-                        .filter(Boolean)
-                        .map((col) => (
-                          <th
-                            key={col}
-                            className="text-xs uppercase font-semibold tracking-wider whitespace-normal break-words text-center"
-                          >
-                            {col}
-                          </th>
-                        ))}
-                    </tr>
-                  </thead>
-                  <tbody className="text-center">
-                    {filteredHortas.length > 0 ? (
-                      filteredHortas.map((horta) => (
-                        <tr
-                          key={horta.id}
-                          className="hover:bg-base-100/50 transition-colors text-center"
-                        >
-                          <td className="align-middle">
-                            <div className="font-semibold">{horta.nome}</div>
-                            <div className="text-xs opacity-60 flex items-center justify-center gap-1">
-                              <MapPin className="h-3 w-3" /> {horta.endereco}
-                            </div>
-                          </td>
-
-                          <td className="align-middle">
-                            <Badge type={horta.tipoHorta}>
-                              {horta.tipoHorta}
-                            </Badge>
-                          </td>
-
-                          {user.role === "admin" && (
-                            <td className="align-middle">
-                              {horta.gestor.nome}
-                            </td>
-                          )}
-
-                          <td className="align-middle">
-                            <div className="flex items-center justify-center gap-1">
-                              <AreaChart className="h-4 w-4 text-info" />{" "}
-                              {horta.areaCultivada.toFixed(1)}
-                            </div>
-                          </td>
-
-                          <td className="align-middle">
-                            <Badge type={horta.tipoSolo}>
-                              {horta.tipoSolo}
-                            </Badge>
-                          </td>
-
-                          <td className="align-middle">{horta.familia.nome}</td>
-
-                          <td className="align-middle">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                              <button
-                                className="btn btn-ghost btn-sm text-info/80 hover:text-info"
-                                onClick={() => handleViewHorta(horta.id)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                              <button
-                                className="btn btn-ghost btn-sm text-secondary/80 hover:text-primary"
-                                onClick={() => handleOpenModal(horta)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                                onClick={() => handleDeleteHorta(horta.id)}
-                              >
-                                <Trash className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan={7}
-                          className="text-center py-6 text-base-content/60 italic"
-                        >
-                          Nenhuma horta encontrada.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile */}
-              <div className="block md:hidden flex-col gap-2">
-                {filteredHortas.length > 0 ? (
-                  filteredHortas.map((horta) => (
-                    <div
-                      key={horta.id}
-                      className="p-4 border border-base-200 rounded-lg flex justify-between items-start"
-                    >
-                      <div className="flex-1">
-                        <div className="font-semibold">{horta.nome}</div>
-                        <div className="text-xs opacity-60 flex items-center gap-1 mt-1">
-                          <MapPin className="h-3 w-3" /> {horta.endereco}
-                        </div>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          <Badge type={horta.tipoHorta}>
-                            {horta.tipoHorta}
-                          </Badge>
-                          <Badge type={horta.tipoSolo}>{horta.tipoSolo}</Badge>
-                        </div>
-
-                        <div className="flex flex-col gap-1 text-sm mt-2">
-                          <div className="flex gap-1">
-                            <span className="font-medium">Gestor:</span>{" "}
-                            {horta.gestor.nome}
-                          </div>
-                          <div className="flex gap-1">
-                            <span className="font-medium">Área:</span>{" "}
-                            {horta.areaCultivada.toFixed(1)} m²
-                          </div>
-                          <div className="flex gap-1">
-                            <span className="font-medium">Família:</span>{" "}
-                            {horta.familia.nome}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-2 ml-4 flex-shrink-0">
-                        <button
-                          className="btn btn-ghost btn-sm text-info/80 hover:text-info"
-                          onClick={() => handleViewHorta(horta.id)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-sm text-secondary/80 hover:text-primary"
-                          onClick={() => handleOpenModal(horta)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                          onClick={() => handleDeleteHorta(horta.id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-6 text-center text-base-content/60 italic">
-                    Nenhuma horta encontrada.
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredHortas.map((horta) => (
-                <div
-                  key={horta.id}
-                  className="p-4 border border-base-200 rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col gap-2 relative"
-                >
-                  <div className="absolute top-2 right-2 flex flex-col gap-1">
-                    <button
-                      className="btn btn-ghost btn-sm text-info/80 hover:text-info"
-                      onClick={() => handleViewHorta(horta.id)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm text-primary/80 hover:text-primary"
-                      onClick={() => handleOpenModal(horta)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                      onClick={() => handleDeleteHorta(horta.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="font-bold text-lg">{horta.nome}</div>
-                  <div className="text-xs opacity-60 flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> {horta.endereco}
-                  </div>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <Badge type={horta.tipoHorta}>{horta.tipoHorta}</Badge>
-                    <Badge type={horta.tipoSolo}>{horta.tipoSolo}</Badge>
-                  </div>
-
-                  <div className="flex flex-col gap-1 text-sm mt-2">
-                    <div className="flex gap-1">
-                      <span className="font-medium">Gestor:</span>{" "}
-                      {horta.gestor.nome}
-                    </div>
-                    <div className="flex gap-1">
-                      <span className="font-medium">Área:</span>{" "}
-                      {horta.areaCultivada.toFixed(1)} m²
-                    </div>
-                    <div className="flex gap-1">
-                      <span className="font-medium">Família:</span>{" "}
-                      {horta.familia.nome}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Modal de adicionar Horta */}
-          <FormModal
-            ref={modalRef}
-            title={editingHorta ? "Editar Horta" : "Adicionar Horta"}
-            onSubmit={form.handleSubmit(handleSaveHorta)}
-            submitLabel={editingHorta ? "Salvar Alterações" : "Adicionar Horta"}
+        </>
+      )}
+      {/* Filtros */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center gap-2 px-4 py-2 border border-base-300 rounded-lg shadow-sm bg-base-100 w-full">
+          <Search className="h-4 w-4 text-primary/70" />
+          <input
+            type="text"
+            className="grow bg-transparent focus:outline-none text-base-content"
+            placeholder="Buscar nome, endereço ou gestor..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <select
+            className="select select-bordered flex-1 w-full sm:w-auto rounded-lg"
+            value={typeFilter || ""}
+            onChange={(e) => setTypeFilter(e.target.value || "")}
           >
+            <option value="">Todos os Tipos</option>
+            {uniqueHortaTypes.map((type) => (
+              <option key={type} value={type}>
+                {type.charAt(0).toUpperCase() + type.slice(1).replace("_", " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {/* Botões de visualização */}
+      <div className="flex justify-start gap-2 mb-4">
+        <button
+          className={`btn btn-sm ${
+            viewMode === "table" ? "btn-primary" : "btn-outline border-base-300"
+          }`}
+          onClick={() => setViewMode("table")}
+          disabled={isMobile || sidebarOpen}
+        >
+          <Table className="h-4 w-4 mr-1" /> Tabela
+        </button>
+        <button
+          className={`btn btn-sm ${
+            viewMode === "cards" ? "btn-primary" : "btn-outline border-base-300"
+          }`}
+          onClick={() => setViewMode("cards")}
+        >
+          <LayoutGrid className="h-4 w-4 mr-1" /> Cards
+        </button>
+      </div>
+      {/* Tabela ou Cards */}
+      {viewMode === "table" ? (
+        <div className="overflow-x-auto shadow-xl rounded-xl border border-base-200">
+          <table className="table w-full table-zebra table-fixed">
+            <thead>
+              <tr>
+                {[
+                  "Horta",
+                  "Tipo",
+                  user.role === "gestor" ? null : "Gestor",
+                  "Área (m²)",
+                  "Solo",
+                  "Família",
+                  "Ações",
+                ]
+                  .filter(Boolean)
+                  .map((col) => (
+                    <th
+                      key={col}
+                      className="text-xs uppercase font-semibold tracking-wider"
+                    >
+                      {col}
+                    </th>
+                  ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHortas.length > 0 ? (
+                filteredHortas.map((h) => (
+                  <tr key={h.id}>
+                    <td>
+                      <div className="font-semibold">{h.nome}</div>
+                      <div className="text-xs opacity-60 flex items-center justify-center gap-1">
+                        <MapPin className="h-3 w-3" /> {h.endereco}
+                      </div>
+                    </td>
+
+                    <td>
+                      <Badge type={h.tipoHorta}>{h.tipoHorta}</Badge>
+                    </td>
+
+                    {user.role === "admin" && <td>{h.gestor.nome}</td>}
+
+                    <td>
+                      <div className="flex items-center justify-center gap-1">
+                        <AreaChart className="h-4 w-4 text-info" />{" "}
+                        {h.areaCultivada.toFixed(1)}
+                      </div>
+                    </td>
+
+                    <td>
+                      <Badge type={h.tipoSolo}>{h.tipoSolo}</Badge>
+                    </td>
+
+                    <td>{h.familia.nome}</td>
+
+                    <td>
+                      <SmartDropdown
+                        buttonClass="btn btn-ghost btn-sm text-base-content/70"
+                        items={[
+                          {
+                            icon: <Eye className="h-4 w-4" />,
+                            label: "Visualizar",
+                            onClick: () => navigate(`/hortas/${h.id}`),
+                          },
+                          ...(user.role === "admin" || user.role === "gestor"
+                            ? [
+                                {
+                                  label: "Editar",
+                                  icon: <Edit className="h-4 w-4" />,
+                                  onClick: () => handleOpenModal(h),
+                                },
+                                {
+                                  label: "Excluir",
+                                  icon: <Trash className="h-4 w-4" />,
+                                  danger: true,
+                                  onClick: () => handleDeleteHorta(h.id),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="py-6 text-base-content/60 italic">
+                    Nenhuma horta encontrada.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredHortas.map((h) => (
+            <div
+              key={h.id}
+              className="p-4 border border-base-200 rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
+            >
+              <div className="absolute top-2 right-2">
+                <SmartDropdown
+                  buttonClass="btn btn-ghost btn-xs text-base-content/70"
+                  items={[
+                    {
+                      icon: <Eye className="h-4 w-4" />,
+                      label: "Visualizar",
+                      onClick: () => navigate(`/hortas/${h.id}`),
+                    },
+                    ...(user.role === "admin" || user.role === "gestor"
+                      ? [
+                          {
+                            label: "Editar",
+                            icon: <Edit className="h-4 w-4" />,
+                            onClick: () => handleOpenModal(h),
+                          },
+                          {
+                            label: "Excluir",
+                            icon: <Trash className="h-4 w-4" />,
+                            danger: true,
+                            onClick: () => handleDeleteHorta(h.id),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </div>
+
+              <div className="font-bold text-lg">{h.nome}</div>
+              <div className="text-xs opacity-60 flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> {h.endereco}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Badge type={h.tipoHorta}>{h.tipoHorta}</Badge>
+                <Badge type={h.tipoSolo}>{h.tipoSolo}</Badge>
+              </div>
+
+              <div className="flex flex-col gap-1 text-sm mt-2">
+                <div className="flex gap-1">
+                  <span className="font-medium">Gestor:</span> {h.gestor.nome}
+                </div>
+                <div className="flex gap-1">
+                  <span className="font-medium">Área:</span>{" "}
+                  {h.areaCultivada.toFixed(1)} m²
+                </div>
+                <div className="flex gap-1">
+                  <span className="font-medium">Família:</span> {h.familia.nome}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(user?.role === "admin" || user?.role === "gestor") && (
+        <FormModal
+          ref={modalRef}
+          title={editingHorta ? "Editar Horta" : "Adicionar Horta"}
+          onSubmit={form.handleSubmit(handleSaveHorta)}
+          submitLabel={
+            saving
+              ? "Salvando..."
+              : editingHorta
+              ? "Salvar Alterações"
+              : "Adicionar Horta"
+          }
+          submitLoading={saving}
+        >
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Nome da Horta <span className="text-error">*</span>
+            </label>
             <FormField
               type="input"
               placeholder="Nome da Horta"
@@ -625,6 +550,12 @@ const GardenPage = () => {
               control={form.control}
               className="md:col-span-2"
             />
+          </div>
+
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Endereço <span className="text-error">*</span>
+            </label>
             <FormField
               type="input"
               placeholder="Endereço"
@@ -632,7 +563,10 @@ const GardenPage = () => {
               control={form.control}
               className="md:col-span-2"
             />
+          </div>
 
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">Gestor</label>
             {user?.role === "admin" ? (
               <FormField
                 type="searchable-select"
@@ -654,7 +588,10 @@ const GardenPage = () => {
                 className="input input-bordered w-full bg-base-200 cursor-not-allowed col-span-1"
               />
             )}
+          </div>
 
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">Família</label>
             <FormField
               type="searchable-select"
               placeholder="Selecione uma Família"
@@ -665,19 +602,36 @@ const GardenPage = () => {
                 label: f.nome,
               }))}
             />
+          </div>
 
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Coordenadas (opcional)
+            </label>
             <FormField
               type="input"
               placeholder="Coordenadas (opcional)"
               name="coordenada"
               control={form.control}
             />
+          </div>
+
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Área cultivada (m²) <span className="text-error">*</span>
+            </label>
             <FormField
               type="number"
               placeholder="Área cultivada (m²)"
               name="areaCultivada"
               control={form.control}
             />
+          </div>
+
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Tipo de Solo <span className="text-error">*</span>
+            </label>
             <FormField
               type="select"
               placeholder="Tipo de Solo"
@@ -689,6 +643,12 @@ const GardenPage = () => {
                 { value: "Humoso", label: "Humoso" },
               ]}
             />
+          </div>
+
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Tipo de Horta <span className="text-error">*</span>
+            </label>
             <FormField
               type="select"
               name="tipoHorta"
@@ -701,7 +661,10 @@ const GardenPage = () => {
                   tipo.slice(1).replace("_", " "),
               }))}
             />
+          </div>
 
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">Descrição (opcional)</label>
             <FormField
               type="textarea"
               placeholder="Descrição (opcional)"
@@ -709,6 +672,12 @@ const GardenPage = () => {
               control={form.control}
               className="md:col-span-2"
             />
+          </div>
+
+          <div className="flex flex-col gap-1 w-full">
+            <label className="text-sm font-medium">
+              Observações (opcional)
+            </label>
             <FormField
               type="textarea"
               placeholder="Observações (opcional)"
@@ -716,16 +685,16 @@ const GardenPage = () => {
               control={form.control}
               className="md:col-span-2"
             />
-          </FormModal>
+          </div>
+        </FormModal>
+      )}
 
-          {["admin", "gestor"].includes(user?.role) && (
-            <FloatingButton
-              onClick={() => handleOpenModal(null)}
-              tooltip="Adicionar Horta"
-              icon={<Plus className="h-6 w-6 md:h-7 md:w-7" />}
-            />
-          )}
-        </div>
+      {["admin", "gestor"].includes(user?.role) && (
+        <FloatingButton
+          onClick={() => handleOpenModal(null)}
+          tooltip="Adicionar Horta"
+          icon={<Plus className="h-6 w-6 md:h-7 md:w-7" />}
+        />
       )}
     </div>
   );

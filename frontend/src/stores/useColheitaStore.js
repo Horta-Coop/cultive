@@ -1,79 +1,143 @@
 import { create } from "zustand";
-import { toast } from "react-hot-toast";
+import { devtools } from "zustand/middleware";
 import axios from "../lib/axios";
 
-export const useColheitaStore = create((set) => ({
-  colheitas: null,
-  colheita: null,
-  loading: false,
-  error: null,
+export const useColheitaStore = create(
+  devtools((set, get) => ({
+    colheitas: [],
+    colheitaSelecionada: null,
+    loading: false,
+    error: null,
 
-  fetchColheitas: async (params = {}) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.get("/api/colheitas", { params });
-      set({ colheitas: res.data?.colheitas ?? [], loading: false });
-      return res.data?.colheitas ?? [];
-    } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao listar colheitas");
-      return [];
-    }
-  },
+    normalizeColheita: (colheita) => {
+      let quantidadeColhida = 0;
 
-  getColheita: async (id) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.get(`/api/colheitas/${id}`);
-      set({ colheita: res.data?.colheita ?? null, loading: false });
-      return res.data?.colheita ?? null;
-    } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao obter colheita");
-      return null;
-    }
-  },
+      if (
+        typeof colheita.quantidadeColhida === "object" &&
+        colheita.quantidadeColhida !== null
+      ) {
+        quantidadeColhida =
+          Number(colheita.quantidadeColhida.d) ||
+          Number(colheita.quantidadeColhida.$numberDecimal) ||
+          0;
+      } else {
+        quantidadeColhida = Number(colheita.quantidadeColhida) || 0;
+      }
 
-  createColheita: async (payload) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.post("/api/colheitas", payload);
-      set({ loading: false });
-      return res.data?.colheita ?? null;
-    } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao criar colheita");
-      return null;
-    }
-  },
+      let dataColheitaISO = null;
+      if (colheita.dataColheita) {
+        const date = new Date(colheita.dataColheita);
+        if (!isNaN(date.getTime())) {
+          dataColheitaISO = date.toISOString();
+        } else {
+          console.warn("Colheita com data inválida detectada:", colheita);
+        }
+      }
 
-  updateColheita: async (id, payload) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.put(`/api/colheitas/${id}`, payload);
-      set({ loading: false });
-      return res.data?.colheita ?? null;
-    } catch (error) {
-      set({ loading: false, error });
-      toast.error(
-        error?.response?.data?.message || "Erro ao atualizar colheita"
-      );
-      return null;
-    }
-  },
+      return {
+        ...colheita,
+        dataColheita: dataColheitaISO,
+        quantidadeColhida,
+      };
+    },
 
-  deleteColheita: async (id) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await axios.delete(`/api/colheitas/${id}`);
-      set({ loading: false });
-      return res.data;
-    } catch (error) {
-      set({ loading: false, error });
-      toast.error(error?.response?.data?.message || "Erro ao deletar colheita");
-      return null;
-    }
-  },
-}));
+    fetchColheitas: async (params = {}) => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get("/colheita", { params });
+        const normalizedColheitas = (response.data.colheitas || []).map((c) =>
+          get().normalizeColheita(c)
+        );
+        set({ colheitas: normalizedColheitas });
+      } catch (err) {
+        console.error("Erro ao buscar colheitas:", err);
+        set({
+          error: err.response?.data?.message || "Erro ao buscar colheitas",
+        });
+      } finally {
+        set({ loading: false });
+      }
+    },
 
-export default useColheitaStore;
+    fetchColheitaById: async (id) => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.get(`/colheita/${id}`);
+        set({
+          colheitaSelecionada: get().normalizeColheita(response.data.colheita),
+        });
+        return response.data.colheita;
+      } catch (err) {
+        console.error("Erro ao buscar colheita:", err);
+        set({
+          error: err.response?.data?.message || "Erro ao buscar colheita",
+        });
+        throw err;
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    createColheita: async (data) => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.post("/colheita", data);
+        const colheita = get().normalizeColheita(response.data.colheita);
+
+        set((state) => ({
+          colheitas: [colheita, ...state.colheitas],
+        }));
+
+        return colheita;
+      } catch (err) {
+        console.error("Erro ao criar colheita:", err);
+        set({ error: err.response?.data?.message || "Erro ao criar colheita" });
+        throw err;
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    updateColheita: async (id, data) => {
+      set({ loading: true, error: null });
+      try {
+        const response = await axios.put(`/colheita/${id}`, data);
+        const colheita = get().normalizeColheita(response.data.colheita);
+
+        set((state) => ({
+          colheitas: state.colheitas.map((c) => (c.id === id ? colheita : c)),
+        }));
+
+        return colheita;
+      } catch (err) {
+        console.error("Erro ao atualizar colheita:", err);
+        set({
+          error: err.response?.data?.message || "Erro ao atualizar colheita",
+        });
+        throw err;
+      } finally {
+        set({ loading: false });
+      }
+    },
+    deleteColheita: async (id) => {
+      set({ loading: true, error: null });
+      try {
+        await axios.delete(`/colheita/${id}`);
+
+        set((state) => ({
+          colheitas: state.colheitas.filter((c) => c.id !== id),
+        }));
+      } catch (err) {
+        console.error("Erro ao deletar colheita:", err);
+        set({
+          error: err.response?.data?.message || "Erro ao deletar colheita",
+        });
+        throw err;
+      } finally {
+        set({ loading: false });
+      }
+    },
+
+    clearSelectedColheita: () => set({ colheitaSelecionada: null }),
+  }))
+);

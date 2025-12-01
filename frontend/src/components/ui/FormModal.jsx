@@ -2,10 +2,12 @@ import { X } from "lucide-react";
 import React, { useState, forwardRef, useImperativeHandle } from "react";
 
 export const FormModal = forwardRef(
-  ({ title, children, submitLabel = "Salvar", onSubmit }, ref) => {
+  (
+    { title, children, submitLabel = "Salvar", submitLoading, onSubmit },
+    ref
+  ) => {
     const [open, setOpen] = useState(false);
 
-    // Expõe métodos open/close para controlar o modal externamente
     useImperativeHandle(ref, () => ({
       open: () => setOpen(true),
       close: () => setOpen(false),
@@ -39,6 +41,7 @@ export const FormModal = forwardRef(
                     <div className="col-span-1 md:col-span-2 mt-4">
                       <button
                         type="submit"
+                        disabled={submitLoading}
                         className="btn btn-primary mt-2 w-full"
                       >
                         {submitLabel}

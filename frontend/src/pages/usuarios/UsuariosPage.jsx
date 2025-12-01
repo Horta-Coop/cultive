@@ -20,10 +20,25 @@ import {
   Shield,
   Table,
   LayoutGrid,
+  Eye,
 } from "lucide-react";
 import { usuarioSchemaUpdate } from "@/lib/validation/usuarioSchema";
+import SmartDropdown from "../../components/ui/SmartDropdown";
+import toast from "react-hot-toast";
 
 const Usuarios = () => {
+  const modalRef = useRef(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [viewMode, setViewMode] = useState(isMobile ? "cards" : "table");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [loadingFamilias, setLoadingFamilias] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [saving, setSaving] = useState(false);
+
   const {
     user,
     users,
@@ -33,20 +48,11 @@ const Usuarios = () => {
     deleteUser,
     loading,
   } = useUserStore();
-  const { familias, fetchFamilias } = useFamiliaStore();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [viewMode, setViewMode] = useState(isMobile ? "cards" : "table");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loadingFamilias, setLoadingFamilias] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const modalRef = useRef(null);
+  const { familias, fetchFamilias } = useFamiliaStore();
 
   const form = useForm({
     resolver: zodResolver(usuarioSchemaUpdate),
-    mode: "all",
-    reValidateMode: "all",
     defaultValues: {
       name: "",
       username: "",
@@ -56,6 +62,8 @@ const Usuarios = () => {
       role: "cultivador",
       familiaId: "",
     },
+    mode: "all",
+    reValidateMode: "all",
   });
 
   const { reset } = form;
@@ -64,74 +72,6 @@ const Usuarios = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users
-    .filter((u) => u && typeof u === "object") // garante que não é undefined
-    .filter((u) => {
-      const query = searchQuery.toLowerCase();
-      const visibleToGestor =
-        user?.role === "admin" ||
-        (user?.role === "gestor" &&
-          u.familia &&
-          u.familia.gestorId === user?.id);
-      const matchesQuery =
-        u.nome?.toLowerCase().includes(query) ||
-        u.email?.toLowerCase().includes(query) ||
-        u.username?.toLowerCase().includes(query);
-      return visibleToGestor && matchesQuery;
-    });
-
-  const handleOpenModal = async (userData = null) => {
-    setEditingUser(userData);
-
-    if (!familias || familias.length === 0) {
-      setLoadingFamilias(true);
-      await fetchFamilias();
-      setLoadingFamilias(false);
-    }
-
-    reset({
-      name: userData?.nome || "",
-      username: userData?.username || "",
-      email: userData?.email || "",
-      telefone: userData?.telefone || "",
-      endereco: userData?.endereco || "",
-      role: userData?.role || "cultivador",
-      familiaId: userData?.familiaId || "",
-    });
-
-    modalRef.current?.open();
-  };
-
-  const handleSaveUser = async (data) => {
-    try {
-      if (editingUser) {
-        await updateUser(editingUser.id, data);
-      } else {
-        await createUser(data);
-      }
-      await fetchUsers();
-      modalRef.current?.close();
-      setEditingUser(null);
-    } catch (err) {
-      console.error("Erro ao salvar usuário:", err);
-    }
-  };
-
-  const handleDeleteUser = async (id) => {
-    const confirmDelete = window.confirm(
-      "Tem certeza que deseja excluir este usuário?"
-    );
-    if (!confirmDelete) return;
-
-    try {
-      await deleteUser(id);
-      await fetchUsers();
-    } catch (err) {
-      console.error("Erro ao excluir usuário:", err);
-    }
-  };
-
-  // 📱 Responsividade
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
@@ -159,12 +99,97 @@ const Usuarios = () => {
       window.removeEventListener("sidebar-toggle", handleSidebarToggle);
   }, [isMobile]);
 
+  const filteredUsers = users
+    .filter((u) => u && typeof u === "object")
+    .filter((u) => {
+      const query = searchQuery.toLowerCase();
+      const visibleToGestor =
+        user?.role === "admin" ||
+        (user?.role === "gestor" &&
+          u.familia &&
+          u.familia.gestorId === user?.id);
+      const matchesQuery =
+        u.nome?.toLowerCase().includes(query) ||
+        u.email?.toLowerCase().includes(query) ||
+        u.username?.toLowerCase().includes(query);
+      return visibleToGestor && matchesQuery;
+    });
+
+  const handleOpenModal = async (user = null) => {
+    setModalLoading(true);
+
+    try {
+      setEditingUser(user);
+
+      if (!familias || familias.length === 0) {
+        setLoadingFamilias(true);
+        await fetchFamilias();
+        setLoadingFamilias(false);
+      }
+
+      reset({
+        name: user?.nome || "",
+        username: user?.username || "",
+        email: user?.email || "",
+        telefone: user?.telefone || "",
+        endereco: user?.endereco || "",
+        role: user?.role || "cultivador",
+        familiaId: user?.familiaId || "",
+      });
+
+      modalRef.current?.open();
+    } catch {
+      toast.error("Erro ao preparar formulário");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleSaveUser = async (data) => {
+    setSaving(true);
+
+    try {
+      if (editingUser) {
+        await updateUser(editingUser.id, data);
+      } else {
+        await createUser(data);
+      }
+
+      await fetchUsers();
+      modalRef.current?.close();
+      setEditingUser(null);
+    } catch (err) {
+      console.error("Erro ao salvar usuário:", err);
+      console.error("Erro ao salvar usuário:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteUser = async (id) => {
+    const confirmDelete = window.confirm(
+      "Tem certeza que deseja excluir este usuário?"
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteUser(id);
+      await fetchUsers();
+    } catch (err) {
+      console.error("Erro ao excluir usuário:", err);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 relative">
       <LoadingOverlay loading={loading} message="Carregando usuários..." />
       <LoadingOverlay
         loading={loadingFamilias}
         message="Carregando famílias..."
+      />
+      <LoadingOverlay
+        loading={modalLoading}
+        message="Preparando formulário..."
       />
 
       {/* Cabeçalho */}
@@ -247,20 +272,30 @@ const Usuarios = () => {
 
           {/* Renderização da lista */}
           {viewMode === "table" ? (
-            // 🧾 Tabela
             <div className="overflow-x-auto shadow-xl rounded-xl border border-base-200">
-              <table className="table w-full table-zebra">
+              <table className="table w-full table-zebra table-fixed">
                 <thead>
                   <tr>
-                    <th>Nome</th>
-                    <th>Usuário</th>
-                    <th>E-mail</th>
-                    <th>Telefone</th>
-                    <th>Função</th>
-                    <th>Ações</th>
+                    {[
+                      "Nome",
+                      "Usuário",
+                      "E-mail",
+                      "Telefone",
+                      "Função",
+                      "Ações",
+                    ]
+                      .filter(Boolean)
+                      .map((col) => (
+                        <th
+                          key={col}
+                          className="text-xs uppercase font-semibold tracking-wider"
+                        >
+                          {col}
+                        </th>
+                      ))}
                   </tr>
                 </thead>
-                <tbody className="text-center">
+                <tbody>
                   {filteredUsers.length > 0 ? (
                     filteredUsers.map((u) => (
                       <tr key={u.id}>
@@ -272,20 +307,33 @@ const Usuarios = () => {
                           <Badge type={u.role}>{u.role}</Badge>
                         </td>
                         <td>
-                          <div className="flex justify-center gap-2">
-                            <button
-                              className="btn btn-ghost btn-sm text-secondary/80 hover:text-primary"
-                              onClick={() => handleOpenModal(u)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                              onClick={() => handleDeleteUser(u.id)}
-                            >
-                              <Trash className="h-4 w-4" />
-                            </button>
-                          </div>
+                          <SmartDropdown
+                            buttonClass="btn btn-ghost btn-sm text-base-content/70"
+                            items={[
+                              {
+                                icon: <Eye className="h-4 w-4" />,
+                                label: "Visualizar",
+                                onClick: () =>
+                                  toast("Visualizar não implementado"),
+                              },
+                              ...(user.role === "admin" ||
+                              user.role === "gestor"
+                                ? [
+                                    {
+                                      label: "Editar",
+                                      icon: <Edit className="h-4 w-4" />,
+                                      onClick: () => handleOpenModal(u),
+                                    },
+                                    {
+                                      label: "Excluir",
+                                      icon: <Trash className="h-4 w-4" />,
+                                      danger: true,
+                                      onClick: () => handleDeleteUser(u.id),
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </td>
                       </tr>
                     ))
@@ -303,26 +351,39 @@ const Usuarios = () => {
               </table>
             </div>
           ) : (
-            // 🧱 Cards
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredUsers.map((u) => (
                 <div
                   key={u.id}
                   className="p-4 border border-base-200 rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
                 >
-                  <div className="absolute top-2 right-2 flex flex-col gap-1">
-                    <button
-                      className="btn btn-ghost btn-sm text-primary/80 hover:text-primary"
-                      onClick={() => handleOpenModal(u)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                      onClick={() => handleDeleteUser(u.id)}
-                    >
-                      <Trash className="h-4 w-4" />
-                    </button>
+                  {/* Dropdown dos cards */}
+                  <div className="absolute top-2 right-2">
+                    <SmartDropdown
+                      buttonClass="btn btn-ghost btn-xs text-base-content/70"
+                      items={[
+                        {
+                          icon: <Eye className="h-4 w-4" />,
+                          label: "Visualizar",
+                          onClick: () => "",
+                        },
+                        ...(user.role === "admin" || user.role === "gestor"
+                          ? [
+                              {
+                                label: "Editar",
+                                icon: <Edit className="h-4 w-4" />,
+                                onClick: () => handleOpenModal(u),
+                              },
+                              {
+                                label: "Excluir",
+                                icon: <Trash className="h-4 w-4" />,
+                                danger: true,
+                                onClick: () => handleDeleteUser(u.id),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
                   </div>
 
                   <div className="font-bold text-lg">{u.nome}</div>
@@ -337,13 +398,19 @@ const Usuarios = () => {
             </div>
           )}
 
-          {/* 🔹 Modal (oculta senha se estiver editando) */}
           {user?.role === "admin" && (
             <FormModal
               ref={modalRef}
               title={editingUser ? "Editar Usuário" : "Adicionar Usuário"}
               onSubmit={form.handleSubmit(handleSaveUser)}
-              submitLabel={editingUser ? "Salvar Alterações" : "Criar Usuário"}
+              submitLabel={
+                saving
+                  ? "Salvando..."
+                  : editingUser
+                  ? "Salvar Alterações"
+                  : "Criar Usuário"
+              }
+              submitLoading={saving}
             >
               {loadingFamilias ? (
                 <p className="text-center text-base-content/60 italic py-4">
@@ -351,59 +418,93 @@ const Usuarios = () => {
                 </p>
               ) : (
                 <>
-                  <FormField
-                    type="input"
-                    placeholder="Nome completo"
-                    name="name"
-                    control={form.control}
-                  />
-                  <FormField
-                    type="input"
-                    placeholder="Nome de usuário"
-                    name="username"
-                    control={form.control}
-                  />
-                  <FormField
-                    type="input"
-                    placeholder="E-mail"
-                    name="email"
-                    control={form.control}
-                  />
+                  <div className="flex flex-col gap-1 w-full">
+                    <label className="text-sm font-medium">
+                      Nome Completo <span className="text-error">*</span>
+                    </label>
+                    <FormField
+                      type="input"
+                      placeholder="Nome completo"
+                      name="name"
+                      control={form.control}
+                    />
+                  </div>
 
-                  <FormField
-                    type="input"
-                    placeholder="Telefone"
-                    name="telefone"
-                    control={form.control}
-                  />
-                  <FormField
-                    type="input"
-                    placeholder="Endereço"
-                    name="endereco"
-                    control={form.control}
-                  />
-                  <FormField
-                    type="select"
-                    placeholder="Função"
-                    name="role"
-                    control={form.control}
-                    options={[
-                      { value: "admin", label: "Administrador" },
-                      { value: "gestor", label: "Gestor" },
-                      { value: "cultivador", label: "Cultivador" },
-                      { value: "voluntario", label: "Voluntário" },
-                    ]}
-                  />
-                  <FormField
-                    type="searchable-select"
-                    placeholder="Família (opcional)"
-                    name="familiaId"
-                    control={form.control}
-                    options={familias.map((f) => ({
-                      value: f.id,
-                      label: f.nome,
-                    }))}
-                  />
+                  <div className="flex flex-col gap-1 w-full">
+                    <label className="text-sm font-medium">
+                      Username <span className="text-error">*</span>
+                    </label>
+                    <FormField
+                      type="input"
+                      placeholder="Nome de usuário"
+                      name="username"
+                      control={form.control}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1 w-full">
+                    <label className="text-sm font-medium">
+                      Email <span className="text-error">*</span>
+                    </label>
+                    <FormField
+                      type="input"
+                      placeholder="E-mail"
+                      name="email"
+                      control={form.control}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1 w-full">
+                    <label className="text-sm font-medium">Telefone</label>
+                    <FormField
+                      type="input"
+                      placeholder="Telefone"
+                      name="telefone"
+                      control={form.control}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1 w-full">
+                    <label className="text-sm font-medium">Endereço</label>
+                    <FormField
+                      type="input"
+                      placeholder="Endereço"
+                      name="endereco"
+                      control={form.control}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1 w-full">
+                    <label className="text-sm font-medium">Função</label>
+                    <FormField
+                      type="select"
+                      placeholder="Função"
+                      name="role"
+                      control={form.control}
+                      options={[
+                        { value: "admin", label: "Administrador" },
+                        { value: "gestor", label: "Gestor" },
+                        { value: "cultivador", label: "Cultivador" },
+                        { value: "voluntario", label: "Voluntário" },
+                      ]}
+                    />
+                  </div>
+                  {(user?.role !== "admin" || !editingUser) && (
+                    <div className="flex flex-col gap-1 w-full">
+                      <label className="text-sm font-medium">
+                        Família (opcional)
+                      </label>
+                      <FormField
+                        type="searchable-select"
+                        placeholder="Família (opcional)"
+                        name="familiaId"
+                        control={form.control}
+                        options={familias.map((f) => ({
+                          value: f.id,
+                          label: f.nome,
+                        }))}
+                      />
+                    </div>
+                  )}
                 </>
               )}
             </FormModal>

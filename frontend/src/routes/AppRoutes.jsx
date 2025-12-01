@@ -31,6 +31,7 @@ const ForgotPasswordPage = lazy(() =>
   import("@/pages/usuarios/ForgotPassword")
 );
 const Onboarding = lazy(() => import("@/pages/usuarios/Onboarding"));
+const NotFoundPage = lazy(() => import("@/pages/NotFoundPage"));
 
 export default function AppRoutes() {
   return (
@@ -75,7 +76,7 @@ export default function AppRoutes() {
         </Route>
 
         {/* Página 404 */}
-        <Route path="*" element={<div>404 - Não encontrado</div>} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </Suspense>
   );

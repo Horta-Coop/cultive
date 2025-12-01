@@ -1,6 +1,5 @@
 import { ColheitaRepository } from "../repositories/ColheitaRepository.js";
 import { PlantioRepository } from "../repositories/PlantioRepository.js";
-import { HortaRepository } from "../repositories/HortaRepository.js";
 
 const mapColheita = (c) => {
   if (!c) return null;
@@ -13,9 +12,14 @@ const mapColheita = (c) => {
     destinoColheita: c.destinoColheita,
     observacoes: c.observacoes,
     plantioId: c.plantioId,
-    plantio: c.plantio ?? null,
-    createdAt: c.createdAt ?? null,
-    updatedAt: c.updatedAt ?? null,
+    horta: c.plantio?.horta
+      ? {
+          id: c.plantio.horta.id,
+          nome: c.plantio.horta.nome,
+          gestorId: c.plantio.horta.gestorId,
+          familiaId: c.plantio.horta.familiaId,
+        }
+      : null,
   };
 };
 
@@ -28,62 +32,25 @@ export const ColheitaService = {
         ? (parseInt(page, 10) - 1) * parseInt(limit, 10)
         : undefined;
 
-    // admin sees all
-    if (requester.role === "admin") {
-      const raw = await ColheitaRepository.findAll({
-        take,
-        skip,
-        where: plantioId ? { plantioId } : undefined,
-      });
-      return raw.map(mapColheita);
-    }
+    const where = {};
+    if (plantioId) where.plantioId = plantioId;
 
-    // gestor: must ensure the plantio/horta is under his management
+    const raw = await ColheitaRepository.findAll({ take, skip, where });
+
+    // Filtro por role
+    if (requester.role === "admin") return raw.map(mapColheita);
+
     if (requester.role === "gestor") {
-      const where = {};
-      if (plantioId) where.plantioId = plantioId;
-
-      const raw = await ColheitaRepository.findAll({ take, skip, where });
-
-      // filter locally to keep simple: include only those where plantio.horta.gestorId === requester.id
-      const filtered = [];
-      for (const c of raw) {
-        const plantio =
-          c.plantio ||
-          (c.plantioId ? await PlantioRepository.findById(c.plantioId) : null);
-        if (!plantio) continue;
-        const horta =
-          plantio.horta ??
-          (plantio.hortaId
-            ? await HortaRepository.findById(plantio.hortaId)
-            : null);
-        if (horta?.gestorId === requester.id) filtered.push(c);
-      }
-      return filtered.map(mapColheita);
+      return raw
+        .filter((c) => c.plantio?.horta?.gestorId === requester.id)
+        .map(mapColheita);
     }
 
-    // cultivador/voluntario: show colheitas only for plantios in their family hortas
     if (["cultivador", "voluntario"].includes(requester.role)) {
       if (!requester.familiaId) return [];
-      const raw = await ColheitaRepository.findAll({
-        take,
-        skip,
-        where: plantioId ? { plantioId } : undefined,
-      });
-      const filtered = [];
-      for (const c of raw) {
-        const plantio =
-          c.plantio ||
-          (c.plantioId ? await PlantioRepository.findById(c.plantioId) : null);
-        if (!plantio) continue;
-        const horta =
-          plantio.horta ??
-          (plantio.hortaId
-            ? await HortaRepository.findById(plantio.hortaId)
-            : null);
-        if (horta?.familiaId === requester.familiaId) filtered.push(c);
-      }
-      return filtered.map(mapColheita);
+      return raw
+        .filter((c) => c.plantio?.horta?.familiaId === requester.familiaId)
+        .map(mapColheita);
     }
 
     return [];
@@ -93,52 +60,51 @@ export const ColheitaService = {
     const c = await ColheitaRepository.findById(id);
     if (!c) throw new Error("Colheita não encontrada");
 
-    if (requester.role === "admin") return mapColheita(c);
+    const horta = c.plantio?.horta;
 
-    const plantio =
-      c.plantio ??
-      (c.plantioId ? await PlantioRepository.findById(c.plantioId) : null);
-    const horta =
-      plantio?.horta ??
-      (plantio?.hortaId
-        ? await HortaRepository.findById(plantio.hortaId)
-        : null);
+    if (requester.role === "admin") return mapColheita(c);
 
     if (requester.role === "gestor") {
       if (horta?.gestorId === requester.id) return mapColheita(c);
-      throw new Error("Acesso negado");
+      throw new Error("Acesso negado: Você não gerencia esta horta.");
     }
 
     if (["cultivador", "voluntario"].includes(requester.role)) {
       if (horta?.familiaId === requester.familiaId) return mapColheita(c);
-      throw new Error("Acesso negado");
+      throw new Error(
+        "Acesso negado: Esta colheita não pertence à sua família."
+      );
     }
 
     throw new Error("Acesso negado");
   },
 
   createColheita: async ({ data, requester }) => {
-    // only gestor or admin can create colheitas
     if (!["admin", "gestor"].includes(requester.role))
-      throw new Error("Acesso negado");
+      throw new Error(
+        "Acesso negado: Somente administradores ou gestores podem criar colheitas."
+      );
 
-    // must reference an existing plantio
     const plantioId = data.plantioId ?? data.plantio;
     if (!plantioId) throw new Error("plantioId é obrigatório");
 
-    const plantio = await PlantioRepository.findById(plantioId);
+    const plantio = await PlantioRepository.findById(plantioId, {
+      horta: true,
+    });
     if (!plantio) throw new Error("Plantio não encontrado");
 
-    // if gestor, ensure horta belongs to gestor
-    if (requester.role === "gestor") {
-      const horta =
-        plantio.horta ??
-        (plantio.hortaId
-          ? await HortaRepository.findById(plantio.hortaId)
-          : null);
-      if (!horta || horta.gestorId !== requester.id)
-        throw new Error("Acesso negado para criar colheita nesse plantio");
-    }
+    if (requester.role === "gestor" && plantio.horta?.gestorId !== requester.id)
+      throw new Error(
+        "Acesso negado: Você não gerencia a horta deste plantio."
+      );
+
+    const existingColheita = await ColheitaRepository.findByPlantioId(
+      plantioId
+    );
+    if (existingColheita)
+      throw new Error(
+        "Este plantio já foi colhido. Não é possível criar outra colheita."
+      );
 
     const createData = {
       plantioId,
@@ -160,20 +126,18 @@ export const ColheitaService = {
     const c = await ColheitaRepository.findById(id);
     if (!c) throw new Error("Colheita não encontrada");
 
+    const horta = c.plantio?.horta;
+
     if (requester.role === "admin") {
-      // allowed
     } else if (requester.role === "gestor") {
-      const plantio =
-        c.plantio ??
-        (c.plantioId ? await PlantioRepository.findById(c.plantioId) : null);
-      const horta =
-        plantio?.horta ??
-        (plantio?.hortaId
-          ? await HortaRepository.findById(plantio.hortaId)
-          : null);
-      if (horta?.gestorId !== requester.id) throw new Error("Acesso negado");
+      if (horta?.gestorId !== requester.id)
+        throw new Error(
+          "Acesso negado: Você não gerencia a horta desta colheita."
+        );
     } else {
-      throw new Error("Acesso negado");
+      throw new Error(
+        "Acesso negado: Somente administradores ou gestores podem atualizar colheitas."
+      );
     }
 
     const updateData = {};
@@ -186,6 +150,8 @@ export const ColheitaService = {
     if (data.destinoColheita) updateData.destinoColheita = data.destinoColheita;
     if (data.observacoes) updateData.observacoes = data.observacoes;
 
+    if (Object.keys(updateData).length === 0) return mapColheita(c);
+
     const updated = await ColheitaRepository.update(id, updateData);
     return mapColheita(updated);
   },
@@ -194,21 +160,20 @@ export const ColheitaService = {
     const c = await ColheitaRepository.findById(id);
     if (!c) throw new Error("Colheita não encontrada");
 
+    const horta = c.plantio?.horta;
+
     if (requester.role === "admin") return await ColheitaRepository.delete(id);
 
     if (requester.role === "gestor") {
-      const plantio =
-        c.plantio ??
-        (c.plantioId ? await PlantioRepository.findById(c.plantioId) : null);
-      const horta =
-        plantio?.horta ??
-        (plantio?.hortaId
-          ? await HortaRepository.findById(plantio.hortaId)
-          : null);
-      if (horta?.gestorId !== requester.id) throw new Error("Acesso negado");
+      if (horta?.gestorId !== requester.id)
+        throw new Error(
+          "Acesso negado: Você não gerencia a horta desta colheita."
+        );
       return await ColheitaRepository.delete(id);
     }
 
-    throw new Error("Acesso negado");
+    throw new Error(
+      "Acesso negado: Somente administradores ou gestores podem deletar colheitas."
+    );
   },
 };

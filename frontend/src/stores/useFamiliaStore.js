@@ -7,7 +7,6 @@ export const useFamiliaStore = create((set, get) => ({
   selectedFamilia: null,
   loading: false,
 
-  // --- Familias ---
   fetchFamilias: async (params = {}) => {
     set({ loading: true });
     try {
@@ -84,6 +83,57 @@ export const useFamiliaStore = create((set, get) => ({
     } catch (error) {
       set({ loading: false });
       toast.error(error?.response?.data?.message || "Erro ao remover família");
+    }
+  },
+
+  addMembro: async (familiaId, membroData) => {
+    set({ loading: true });
+    try {
+      const res = await axios.post(`/familia/${familiaId}/membros`, membroData);
+      set((state) => ({
+        selectedFamilia: {
+          ...state.selectedFamilia,
+          membros: [...(state.selectedFamilia?.membros || []), res.data.membro],
+        },
+        familias: state.familias.map((f) =>
+          f.id === familiaId
+            ? { ...f, membros: [...(f.membros || []), res.data.membro] }
+            : f
+        ),
+        loading: false,
+      }));
+      toast.success("Membro adicionado com sucesso!");
+    } catch (error) {
+      set({ loading: false });
+      toast.error(error?.response?.data?.message || "Erro ao adicionar membro");
+    }
+  },
+
+  removeMembro: async (membroId) => {
+    set({ loading: true });
+    try {
+      await axios.delete(`/familia/membros/${membroId}`);
+      set((state) => ({
+        selectedFamilia: {
+          ...state.selectedFamilia,
+          membros: state.selectedFamilia.membros.filter(
+            (m) => m.id !== membroId
+          ),
+        },
+        familias: state.familias.map((f) =>
+          f.id === state.selectedFamilia?.id
+            ? {
+                ...f,
+                membros: f.membros.filter((m) => m.id !== membroId),
+              }
+            : f
+        ),
+        loading: false,
+      }));
+      toast.success("Membro removido com sucesso!");
+    } catch (error) {
+      set({ loading: false });
+      toast.error(error?.response?.data?.message || "Erro ao remover membro");
     }
   },
 

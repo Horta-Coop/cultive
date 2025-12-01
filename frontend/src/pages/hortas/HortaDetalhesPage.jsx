@@ -3,9 +3,22 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useHortaStore } from "@/stores/useHortaStore";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
-import { format } from "date-fns";
-import { ArrowLeft, CalendarDays, Info, MapPin, Sprout, Tractor } from "lucide-react";
-import {Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter} from "@/components/ui/Card";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Info,
+  MapPin,
+  Sprout,
+  Tractor,
+} from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/Card";
 
 const HortaDetalhesPage = () => {
   const { id } = useParams();
@@ -86,11 +99,11 @@ const HortaDetalhesPage = () => {
               <Badge type={horta.tipoHorta}>{horta.tipoHorta}</Badge>
               <Badge type={horta.tipoSolo}>{horta.tipoSolo}</Badge>
             </div>
-            <CardDescription>
+            <CardDescription className="whitespace-normal wrap-break-word">
               {horta.descricao || "Sem descrição disponível."}
             </CardDescription>
             {horta.observacoes && (
-              <CardDescription className="italic text-base-content/60">
+              <CardDescription className="italic text-base-content/60 mt-1 whitespace-normal wrap-break-word">
                 Observações: {horta.observacoes}
               </CardDescription>
             )}
@@ -138,28 +151,30 @@ const HortaDetalhesPage = () => {
               >
                 <CardHeader className="flex justify-between items-center">
                   <CardTitle>{p.cultura}</CardTitle>
-                  <Badge type={p.tipoPlantacao}>
-                    {p.tipoPlantacao}
-                  </Badge>
+                  <Badge type={p.tipoPlantacao}>{p.tipoPlantacao}</Badge>
                 </CardHeader>
 
                 <CardContent className="flex flex-col gap-2 text-sm text-base-content/70">
                   <div className="flex items-center gap-1">
                     <CalendarDays className="h-4 w-4" /> Início:{" "}
-                    {format(new Date(p.dataInicio), "dd/MM/yyyy")}
+                    {p.dataInicio
+                      ? new Date(p.dataInicio).toLocaleDateString("pt-BR")
+                      : "-"}
                   </div>
 
                   <div className="flex items-center gap-1">
                     <CalendarDays className="h-4 w-4" /> Previsão:{" "}
-                    {format(new Date(p.previsaoColheita), "dd/MM/yyyy")}
+                    {p.previsaoColheita
+                      ? new Date(p.previsaoColheita).toLocaleDateString("pt-BR")
+                      : "-"}
                   </div>
 
-                  {p.dataColheita && (
-                    <div className="flex items-center gap-1">
-                      <CalendarDays className="h-4 w-4" /> Colheita:{" "}
-                      {format(new Date(p.dataColheita), "dd/MM/yyyy")}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1">
+                    <CalendarDays className="h-4 w-4" /> Colheita:{" "}
+                    {p.dataColheita
+                      ? new Date(p.dataColheita).toLocaleDateString("pt-BR")
+                      : "-"}
+                  </div>
 
                   <div className="flex items-center gap-1">
                     <Sprout className="h-4 w-4" /> Quantidade plantada:{" "}
@@ -167,7 +182,7 @@ const HortaDetalhesPage = () => {
                   </div>
 
                   {p.observacoes && (
-                    <CardDescription className="italic text-base-content/60 mt-1">
+                    <CardDescription className="italic text-base-content/60 mt-1 whitespace-normal wrap-break-word">
                       {p.observacoes}
                     </CardDescription>
                   )}
@@ -175,7 +190,7 @@ const HortaDetalhesPage = () => {
               </Card>
             ))
           ) : (
-            <CardDescription className="italic text-base-content/60">
+            <CardDescription className="italic text-base-content/60 whitespace-normal wrap-break-word">
               Nenhum plantio registrado nesta horta.
             </CardDescription>
           )}

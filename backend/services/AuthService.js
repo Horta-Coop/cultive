@@ -12,7 +12,6 @@ import { sendResetEmail } from "../utils/email.js";
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || "12", 10);
 const PEPPER = process.env.PEPPER || "";
 
-// dummy hash gerado uma vez (para "invalid-password")
 const DUMMY_HASH = bcrypt.hashSync("invalid-password", BCRYPT_ROUNDS);
 
 export const AuthService = {

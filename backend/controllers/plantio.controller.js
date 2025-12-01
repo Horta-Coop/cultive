@@ -1,23 +1,13 @@
 import { PlantioService } from "../services/PlantioService.js";
 
-const mapErrorStatus = (msg) => {
-  if (!msg) return 500;
-  if (msg.toLowerCase().includes("não encontrado") || msg.toLowerCase().includes("não existe")) return 404;
-  if (msg.toLowerCase().includes("acesso negado") || msg.toLowerCase().includes("forbidden")) return 403;
-  if (msg.toLowerCase().includes("obrigat")) return 400;
-  return 500;
-};
-
 export const getAllPlantios = async (req, res) => {
   try {
     const requester = req.user;
-    const params = { page: req.query.page, limit: req.query.limit, hortaId: req.query.hortaId };
-    const plantios = await PlantioService.getAllPlantios({ requester, params });
+    const plantios = await PlantioService.getAllPlantios({ requester });
     return res.json({ plantios });
   } catch (error) {
     console.error("getAllPlantios:", error);
-    const status = mapErrorStatus(error.message);
-    return res.status(status).json({ message: error.message || "Erro ao listar plantios" });
+    return res.status(500).json({ message: error.message });
   }
 };
 
@@ -29,8 +19,8 @@ export const getPlantioById = async (req, res) => {
     return res.json({ plantio });
   } catch (error) {
     console.error("getPlantioById:", error);
-    const status = mapErrorStatus(error.message);
-    return res.status(status).json({ message: error.message || "Erro ao obter plantio" });
+    const status = error.message === "Plantio não encontrado" ? 404 : 403;
+    return res.status(status).json({ message: error.message });
   }
 };
 
@@ -42,8 +32,8 @@ export const createPlantio = async (req, res) => {
     return res.status(201).json({ plantio: created });
   } catch (error) {
     console.error("createPlantio:", error);
-    const status = mapErrorStatus(error.message);
-    return res.status(status).json({ message: error.message || "Erro ao criar plantio" });
+    const message = error.message || "Erro ao criar plantio";
+    return res.status(400).json({ message });
   }
 };
 
@@ -56,8 +46,8 @@ export const updatePlantio = async (req, res) => {
     return res.json({ plantio: updated });
   } catch (error) {
     console.error("updatePlantio:", error);
-    const status = mapErrorStatus(error.message);
-    return res.status(status).json({ message: error.message || "Erro ao atualizar plantio" });
+    const status = error.message === "Plantio não encontrado" ? 404 : 403;
+    return res.status(status).json({ message: error.message });
   }
 };
 
@@ -69,7 +59,7 @@ export const deletePlantio = async (req, res) => {
     return res.json({ message: "Plantio removido" });
   } catch (error) {
     console.error("deletePlantio:", error);
-    const status = mapErrorStatus(error.message);
-    return res.status(status).json({ message: error.message || "Erro ao remover plantio" });
+    const status = error.message === "Plantio não encontrado" ? 404 : 403;
+    return res.status(status).json({ message: error.message });
   }
 };

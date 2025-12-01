@@ -58,7 +58,7 @@ export const updateUser = async (req, res) => {
     let usuario;
 
     if (req.user.role === "admin") {
-      usuario = await UserService.updateUserAdmin(id, body);
+      usuario = await UserService.updateUserAdmin(id, body, req.user);
     } else if (req.user.role === "gestor") {
       usuario = await UserService.updateUserGestor(id, req.user.id, body);
     } else {
@@ -106,7 +106,7 @@ export const createUserByAdmin = async (req, res) => {
       senha: tempPassword,
       role,
       familiaId,
-    });
+    }, req.user);
 
     // Cria token de reset
     const resetToken = await UserService.createResetToken(user.id);
@@ -131,7 +131,7 @@ export const completeUserOnboarding = async (req, res) => {
     const userId = req.user.id; // vem do token JWT
     const body = req.body;
 
-    const updatedUser = await UserService.completeOnboarding(userId, body);
+    const updatedUser = await UserService.completeOnboarding(userId, body, req.user);
 
     return res.json({
       message: "Perfil completado com sucesso!",

@@ -1,58 +1,44 @@
-import React, { useEffect, useState } from "react";
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Users, Sprout, ClipboardList, UserCog } from "lucide-react";
+import { useFamiliaStore } from "@/stores/useFamiliaStore";
+import { useUserStore } from "@/stores/useUserStore";
+import { FormModal } from "@/components/ui/FormModal";
+import { FormField } from "@/components/layout/FormField";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import {
+  ArrowLeft,
+  Users,
+  Sprout,
+  ClipboardList,
+  UserCog,
+  Plus,
+} from "lucide-react";
+import toast from "react-hot-toast";
+import { useForm } from "react-hook-form";
 
 const FamiliaDetalhesPage = () => {
   const { id } = useParams();
-  const [familia, setFamilia] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { selectedFamilia, getFamiliaById, loading } = useFamiliaStore();
+  const { fetchUsers, updateUser, user } = useUserStore();
+
+  const addMemberModalRef = useRef(null);
+  const userForm = useForm({ defaultValues: { userIds: [] } });
+
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // 🔧 Substitua pela chamada real do backend (ex: fetch(`/api/familias/${id}`))
-    async function fetchFamilia() {
-      try {
-        // Simulação temporária:
-        const data = {
-          id,
-          nome: "Família Silva",
-          representante: "João Silva",
-          descricao: "Família dedicada ao cultivo de hortaliças orgânicas.",
-          qtdMembros: 4,
-          gestor: { nome: "Maria Oliveira", role: "gestor" },
-          membros: [
-            { id: 1, nome: "João Silva", role: "cultivador" },
-            { id: 2, nome: "Ana Silva", role: "voluntario" },
-          ],
-          hortas: [
-            { id: 1, nome: "Horta Central", tipoHorta: "comunitaria" },
-            { id: 2, nome: "Horta Norte", tipoHorta: "escolar" },
-          ],
-          plantios: [
-            { id: 1, cultura: "Alface", tipoPlantacao: "orgânico" },
-            { id: 2, cultura: "Tomate", tipoPlantacao: "convencional" },
-          ],
-        };
-
-        setFamilia(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchFamilia();
+    if (id) getFamiliaById(id);
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-      </div>
-    );
+    return <LoadingOverlay loading={loading} message="Carregando família..." />;
   }
 
-  if (!familia) {
+  if (!selectedFamilia) {
     return (
       <div className="text-center mt-20 text-base-content/70">
         Família não encontrada.
@@ -60,10 +46,65 @@ const FamiliaDetalhesPage = () => {
     );
   }
 
+  const familia = selectedFamilia;
+
+  const handleOpenAddMemberModal = async () => {
+    setLoadingUsers(true);
+    try {
+      await fetchUsers();
+      const updatedUsers = useUserStore.getState().users;
+      const available = updatedUsers.filter(
+        (u) =>
+          !["admin"].includes(u.role) &&
+          u.familiaId !== familia.id &&
+          u.id !== user.id
+      );
+
+      setAvailableUsers(available);
+
+      userForm.reset({ userIds: [] });
+
+      addMemberModalRef.current?.open();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao carregar usuários.");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleAddMembers = async (data) => {
+    const userIds = data.userIds.map((u) => u.value);
+    if (userIds.length === 0) {
+      toast.error("Selecione ao menos um usuário.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await Promise.all(
+        userIds.map((uid) => updateUser(uid, { familiaId: familia.id }))
+      );
+      toast.success("Membros adicionados com sucesso!");
+      addMemberModalRef.current?.close();
+      userForm.reset({ userIds: [] });
+      getFamiliaById(id);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao adicionar membros.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 relative">
+      {/* Loading geral */}
+      <LoadingOverlay loading={loading} message="Carregando família..." />
+      <LoadingOverlay loading={loadingUsers} message="Carregando usuarios..." />
+
       {/* Voltar */}
-      <div className="mb-4">
+      <div>
         <Link to="/familias" className="btn btn-ghost btn-sm gap-2">
           <ArrowLeft className="h-4 w-4" />
           Voltar
@@ -71,90 +112,138 @@ const FamiliaDetalhesPage = () => {
       </div>
 
       {/* Cabeçalho */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-base-content mb-1">
+      <div className="mb-4">
+        <h1 className="text-4xl font-bold text-base-content mb-1">
           {familia.nome}
         </h1>
-        <p className="text-base-content/60">{familia.descricao}</p>
+        <p className="text-base-content/70">
+          {familia.descricao || "Sem descrição"}
+        </p>
       </div>
 
-      {/* Gestor */}
-      <div className="card bg-base-100 border border-base-200 shadow-sm mb-6">
-        <div className="card-body">
-          <h2 className="card-title flex items-center gap-2 text-primary">
-            <UserCog className="h-5 w-5" />
-            Gestor Responsável
-          </h2>
-          <p className="mt-2">
-            <span className="font-semibold">{familia.gestor?.nome}</span> —{" "}
-            <span className="text-base-content/70">{familia.gestor?.role}</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Informações principais */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Membros */}
-        <div className="card bg-base-100 border border-base-200 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title flex items-center gap-2 text-secondary">
-              <Users className="h-5 w-5" />
-              Membros da Família ({familia.qtdMembros})
-            </h2>
-            <ul className="mt-2 space-y-1 text-sm">
-              {familia.membros.map((m) => (
-                <li key={m.id} className="flex justify-between">
-                  <span>{m.nome}</span>
-                  <span className="text-base-content/60 capitalize">
-                    {m.role}
-                  </span>
-                </li>
-              ))}
-            </ul>
+        {/* Gestor */}
+        {familia.gestor && (
+          <div className="card bg-primary/10 border border-primary shadow-md p-4 rounded-lg">
+            <div className="flex items-center gap-4 mb-3">
+              <UserCog className="h-6 w-6 text-primary" />
+              <h2 className="text-lg font-semibold text-primary">
+                Gestor Responsável
+              </h2>
+            </div>
+            <p>
+              <span className="font-semibold">{familia.gestor.nome}</span> —{" "}
+              <span className="text-base-content/60 capitalize">
+                {familia.gestor.role}
+              </span>
+            </p>
           </div>
+        )}
+
+        {/* Membros */}
+        <div className="card bg-base-100 border border-base-200 shadow-md p-4 rounded-lg relative">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-secondary" />
+              <h2 className="text-lg font-semibold text-secondary">
+                Membros ({familia.membros?.length || 0})
+              </h2>
+            </div>
+
+            {(user.role === "admin" || user.role === "gestor") && (
+              <button
+                className="btn btn-sm btn-success gap-1"
+                onClick={handleOpenAddMemberModal}
+              >
+                <Plus className="h-4 w-4" /> Adicionar
+              </button>
+            )}
+          </div>
+
+          <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
+            {familia.membros?.map((m) => (
+              <li
+                key={m.id}
+                className="flex justify-between border-b border-base-200 pb-1"
+              >
+                <span>{m.nome || m.username}</span>
+                <span className="text-base-content/60 capitalize">
+                  {m.role}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Hortas */}
-        <div className="card bg-base-100 border border-base-200 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title flex items-center gap-2 text-success">
-              <Sprout className="h-5 w-5" />
+        <div className="md:col-span-2 card bg-base-100 border border-base-200 shadow-md p-4 rounded-lg">
+          <div className="flex items-center gap-3 mb-2">
+            <Sprout className="h-5 w-5 text-success" />
+            <h2 className="text-lg font-semibold text-success">
               Hortas Associadas
             </h2>
-            <ul className="mt-2 space-y-1 text-sm">
-              {familia.hortas.map((h) => (
-                <li key={h.id} className="flex justify-between">
-                  <span>{h.nome}</span>
-                  <span className="text-base-content/60">{h.tipoHorta}</span>
-                </li>
-              ))}
-            </ul>
           </div>
+          <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
+            {familia.hortas?.map((h) => (
+              <li key={h.id} className="border-b pb-1">
+                <strong>{h.nome}</strong> — {h.tipoHorta || "N/A"}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Plantios */}
-        <div className="md:col-span-2 card bg-base-100 border border-base-200 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title flex items-center gap-2 text-warning">
-              <ClipboardList className="h-5 w-5" />
+        <div className="md:col-span-2 card bg-base-100 border border-base-200 shadow-md p-4 rounded-lg">
+          <div className="flex items-center gap-3 mb-3">
+            <ClipboardList className="h-5 w-5 text-warning" />
+            <h2 className="text-lg font-semibold text-warning">
               Plantios Ativos
             </h2>
-            {familia.plantios.length > 0 ? (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {familia.plantios.map((p) => (
-                  <span key={p.id} className="badge badge-outline">
-                    {p.cultura} — {p.tipoPlantacao}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-base-content/60 mt-2 text-sm">
-                Nenhum plantio ativo registrado.
-              </p>
-            )}
           </div>
+
+          {familia.hortas?.flatMap((h) => h.plantios || []).length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-3">
+              {familia.hortas
+                .flatMap((h) => h.plantios || [])
+                .map((p) => (
+                  <div key={p.id} className="border rounded-md p-2 shadow-sm">
+                    <p className="font-semibold">{p.cultura}</p>
+                    <p className="text-sm text-base-content/70">
+                      {p.tipoPlantacao || "N/A"} — {p.quantidadePlantada || "0"}{" "}
+                      {p.unidadeMedida || ""}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p className="text-base-content/60 text-sm">
+              Nenhum plantio registrado.
+            </p>
+          )}
         </div>
       </div>
+
+      {/* Modal Adicionar Membros */}
+      <FormModal
+        ref={addMemberModalRef}
+        title={`Adicionar Membros à ${familia.nome}`}
+        submitLabel="Adicionar"
+        onSubmit={userForm.handleSubmit(handleAddMembers)}
+      >
+        {!loadingUsers && !submitting && (
+          <FormField
+            type="user-list"
+            name="userIds"
+            className="col-span-2 w-full"
+            placeholder="Pesquise ou selecione usuários"
+            control={userForm.control}
+            options={availableUsers.map((u) => ({
+              value: u.id,
+              label: u.nome || u.username,
+            }))}
+          />
+        )}
+      </FormModal>
     </div>
   );
 };

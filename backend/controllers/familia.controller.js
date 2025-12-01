@@ -113,3 +113,60 @@ export const deleteFamilia = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+export const addMembro = async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester)
+      return res.status(401).json({ message: "Usuário não autenticado" });
+
+    const { familiaId } = req.params;
+    const { usuarioId } = req.body; // agora o body deve conter apenas { usuarioId }
+
+    if (!usuarioId)
+      return res.status(400).json({ message: "usuarioId é obrigatório" });
+
+    const novoMembro = await FamiliaService.addMembro({
+      familiaId,
+      membroData: { usuarioId },
+      requester,
+    });
+
+    return res.status(201).json({ membro: novoMembro });
+  } catch (error) {
+    console.error("addMembro:", error);
+
+    if (error.message === "Família não encontrada")
+      return res.status(404).json({ message: error.message });
+    if (error.message === "Acesso negado")
+      return res.status(403).json({ message: error.message });
+
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+export const removeMembro = async (req, res) => {
+  try {
+    const requester = req.user;
+    if (!requester)
+      return res.status(401).json({ message: "Usuário não autenticado" });
+
+    const { membroId } = req.params;
+
+    const membroRemovido = await FamiliaService.removeMembro({
+      membroId,
+      requester,
+    });
+
+    return res.json({ membro: membroRemovido, message: "Membro removido" });
+  } catch (error) {
+    console.error("removeMembro:", error);
+
+    if (error.message === "Membro não encontrado")
+      return res.status(404).json({ message: error.message });
+    if (error.message === "Acesso negado")
+      return res.status(403).json({ message: error.message });
+
+    return res.status(500).json({ message: error.message });
+  }
+};

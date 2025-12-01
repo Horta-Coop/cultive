@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import axios from "../lib/axios"; // seu axiosInstance com baseURL e interceptors
+import axios from "../lib/axios";
 
 export const useHortaStore = create(
   devtools((set, get) => ({
@@ -10,31 +10,59 @@ export const useHortaStore = create(
     error: null,
 
     normalizeHorta: (horta) => {
-      let area = 0;
-
-      if (
-        typeof horta.areaCultivada === "object" &&
-        horta.areaCultivada !== null
-      ) {
-        area =
+      // Normaliza área cultivada
+      let areaCultivada = 0;
+      if (typeof horta.areaCultivada === "object" && horta.areaCultivada !== null) {
+        areaCultivada =
           Number(horta.areaCultivada.d) ||
           Number(horta.areaCultivada.$numberDecimal) ||
           0;
       } else {
-        area = Number(horta.areaCultivada) || 0;
+        areaCultivada = Number(horta.areaCultivada) || 0;
       }
+
+      // Normaliza datas
+      const normalizeDate = (date) => {
+        if (!date) return null;
+        if (typeof date === "string" || date instanceof Date) {
+          const d = new Date(date);
+          return isNaN(d.getTime()) ? null : d.toISOString();
+        }
+        if (date.d) {
+          const d = new Date(date.d);
+          return isNaN(d.getTime()) ? null : d.toISOString();
+        }
+        return null;
+      };
+
+      const plantiosNormalized =
+        (horta.plantios || []).map((p) => ({
+          ...p,
+          dataInicio: normalizeDate(p.dataInicio),
+          previsaoColheita: normalizeDate(p.previsaoColheita),
+          dataColheita: normalizeDate(p.dataColheita),
+          quantidadePlantada:
+            typeof p.quantidadePlantada === "object" && p.quantidadePlantada !== null
+              ? Number(p.quantidadePlantada.d) || Number(p.quantidadePlantada.$numberDecimal) || 0
+              : Number(p.quantidadePlantada) || 0,
+          unidadeMedida: p.unidadeMedida || "",
+        }));
+
+      // Normaliza coordenadas
+      const coordenada = horta.coordenada || horta.coordenadasGeoJSON || "";
 
       return {
         ...horta,
-        areaCultivada: area,
-        coordenada: horta.coordenada || "",
+        areaCultivada,
+        coordenada,
+        plantios: plantiosNormalized,
       };
     },
 
-    fetchHortas: async () => {
+    fetchHortas: async (params = {}) => {
       set({ loading: true, error: null });
       try {
-        const response = await axios.get("/horta"); // ou "/api/horta"
+        const response = await axios.get("/horta", { params });
         const normalizedHortas = (response.data.hortas || []).map((h) =>
           get().normalizeHorta(h)
         );
@@ -51,10 +79,13 @@ export const useHortaStore = create(
       set({ loading: true, error: null });
       try {
         const response = await axios.get(`/horta/${id}`);
-        set({ hortaSelecionada: get().normalizeHorta(response.data.horta) });
+        const horta = get().normalizeHorta(response.data.horta);
+        set({ hortaSelecionada: horta });
+        return horta;
       } catch (err) {
         console.error("Erro ao buscar horta:", err);
         set({ error: err.response?.data?.message || "Erro ao buscar horta" });
+        throw err;
       } finally {
         set({ loading: false });
       }
@@ -65,9 +96,7 @@ export const useHortaStore = create(
       try {
         const response = await axios.post("/horta", data);
         const horta = get().normalizeHorta(response.data.horta);
-        set((state) => ({
-          hortas: [...state.hortas, horta],
-        }));
+        set((state) => ({ hortas: [horta, ...state.hortas] }));
         return horta;
       } catch (err) {
         console.error("Erro ao criar horta:", err);
@@ -89,9 +118,7 @@ export const useHortaStore = create(
         return horta;
       } catch (err) {
         console.error("Erro ao atualizar horta:", err);
-        set({
-          error: err.response?.data?.message || "Erro ao atualizar horta",
-        });
+        set({ error: err.response?.data?.message || "Erro ao atualizar horta" });
         throw err;
       } finally {
         set({ loading: false });
@@ -102,9 +129,7 @@ export const useHortaStore = create(
       set({ loading: true, error: null });
       try {
         await axios.delete(`/horta/${id}`);
-        set((state) => ({
-          hortas: state.hortas.filter((h) => h.id !== id),
-        }));
+        set((state) => ({ hortas: state.hortas.filter((h) => h.id !== id) }));
       } catch (err) {
         console.error("Erro ao deletar horta:", err);
         set({ error: err.response?.data?.message || "Erro ao deletar horta" });

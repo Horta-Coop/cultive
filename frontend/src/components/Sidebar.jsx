@@ -55,10 +55,6 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
     { path: "/hortas", icon: Leaf, label: "Hortas" },
     { path: "/plantios", icon: Sprout, label: "Plantios" },
     { path: "/colheitas", icon: Wheat, label: "Colheitas" },
-    { path: "/comunicacao", icon: MessageSquare, label: "Comunicação" },
-    { path: "/notificacoes", icon: Bell, label: "Notificações" },
-    { path: "/ajuda", icon: HelpCircle, label: "Ajuda" },
-    { path: "/configuracoes", icon: Settings, label: "Configurações" },
   ];
 
   const roleMenus = {
@@ -71,7 +67,14 @@ const Sidebar = ({ user, isOpen, onToggle }) => {
     voluntario: [],
   };
 
-  const menuItems = [...baseMenu, ...(roleMenus[role.toLowerCase()] || [])];
+
+  const baseMenu2 = [
+    { path: "/comunicacao", icon: MessageSquare, label: "Comunicação" },
+    { path: "/notificacoes", icon: Bell, label: "Notificações" },
+    { path: "/ajuda", icon: HelpCircle, label: "Ajuda" },
+    { path: "/configuracoes", icon: Settings, label: "Configurações" },
+  ];
+  const menuItems = [...baseMenu, ...(roleMenus[role.toLowerCase()] || []), ...baseMenu2];
 
   return (
     <div

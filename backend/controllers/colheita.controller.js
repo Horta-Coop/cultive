@@ -1,20 +1,5 @@
 import { ColheitaService } from "../services/ColheitaService.js";
 
-const mapErrorStatus = (msg) => {
-  if (!msg) return 500;
-  if (
-    msg.toLowerCase().includes("não encontrado") ||
-    msg.toLowerCase().includes("não existe")
-  )
-    return 404;
-  if (
-    msg.toLowerCase().includes("acesso negado") ||
-    msg.toLowerCase().includes("forbidden")
-  )
-    return 403;
-  if (msg.toLowerCase().includes("obrigat")) return 400;
-  return 500;
-};
 
 export const getAllColheitas = async (req, res) => {
   try {
@@ -31,9 +16,9 @@ export const getAllColheitas = async (req, res) => {
     return res.json({ colheitas });
   } catch (error) {
     console.error("getAllColheitas:", error);
-    const status = mapErrorStatus(error.message);
+    
     return res
-      .status(status)
+      .status(500) 
       .json({ message: error.message || "Erro ao listar colheitas" });
   }
 };
@@ -46,9 +31,9 @@ export const getColheitaById = async (req, res) => {
     return res.json({ colheita });
   } catch (error) {
     console.error("getColheitaById:", error);
-    const status = mapErrorStatus(error.message);
+    
     return res
-      .status(status)
+      .status(500) 
       .json({ message: error.message || "Erro ao obter colheita" });
   }
 };
@@ -61,9 +46,9 @@ export const createColheita = async (req, res) => {
     return res.status(201).json({ colheita: created });
   } catch (error) {
     console.error("createColheita:", error);
-    const status = mapErrorStatus(error.message);
+    
     return res
-      .status(status)
+      .status(500) 
       .json({ message: error.message || "Erro ao criar colheita" });
   }
 };
@@ -81,9 +66,9 @@ export const updateColheita = async (req, res) => {
     return res.json({ colheita: updated });
   } catch (error) {
     console.error("updateColheita:", error);
-    const status = mapErrorStatus(error.message);
+    
     return res
-      .status(status)
+      .status(500) 
       .json({ message: error.message || "Erro ao atualizar colheita" });
   }
 };
@@ -96,9 +81,9 @@ export const deleteColheita = async (req, res) => {
     return res.json({ message: "Colheita removida" });
   } catch (error) {
     console.error("deleteColheita:", error);
-    const status = mapErrorStatus(error.message);
+    
     return res
-      .status(status)
+      .status(500) 
       .json({ message: error.message || "Erro ao remover colheita" });
   }
 };

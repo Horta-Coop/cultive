@@ -1,5 +1,5 @@
 import express from "express";
-import { protectRoute, allowRoles } from "../middleware/auth.middleware.js";
+import { protectRoute, allowRoles } from "../middleware/auth.middleware.js"; // Presumido
 import {
   createColheita,
   getAllColheitas,
@@ -16,8 +16,8 @@ router.get(
   allowRoles("gestor", "admin", "cultivador", "voluntario"),
   getAllColheitas
 );
-router.post("/", protectRoute, allowRoles("gestor", "admin"), createColheita);
 
+router.post("/", protectRoute, allowRoles("gestor", "admin"), createColheita);
 router.get(
   "/:id",
   protectRoute,
@@ -25,6 +25,7 @@ router.get(
   getColheitaById
 );
 router.put("/:id", protectRoute, allowRoles("gestor", "admin"), updateColheita);
+
 router.delete(
   "/:id",
   protectRoute,

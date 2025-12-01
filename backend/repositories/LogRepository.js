@@ -1,7 +1,7 @@
 import prisma from "../config/prisma.js";
 
 export const LogRepository = {
-  createLog: async ({ usuarioId, acao, contexto = null }) => {
+  create: async ({ usuarioId, acao, contexto = null }) => {
     return await prisma.log.create({
       data: { usuarioId, acao, contexto },
     });
@@ -17,6 +17,7 @@ export const LogRepository = {
             nome: true,
             email: true,
             username: true,
+            role: true,
           },
         },
       },
@@ -34,6 +35,7 @@ export const LogRepository = {
             nome: true,
             email: true,
             username: true,
+            role: true,
           },
         },
       },
@@ -50,6 +52,7 @@ export const LogRepository = {
             nome: true,
             email: true,
             username: true,
+            role: true,
           },
         },
       },
@@ -57,10 +60,8 @@ export const LogRepository = {
     });
   },
 
-  deleteLog: async (id) => {
-    return await prisma.log.delete({
-      where: { id },
-    });
+  delete: async (id) => {
+    return await prisma.log.delete({ where: { id } });
   },
 
   deleteAll: async () => {

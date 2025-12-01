@@ -1,4 +1,4 @@
-import  prisma  from "../config/prisma.js";
+import prisma from "../config/prisma.js";
 
 export const FamiliaRepository = {
   findById: async (id) => {
@@ -53,5 +53,28 @@ export const FamiliaRepository = {
 
   deleteFamilia: async (id) => {
     return await prisma.familia.delete({ where: { id } });
+  },
+
+  addMembro: async (familiaId, { usuarioId }) => {
+    return await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { familiaId },
+      select: { id: true, nome: true, email: true, role: true },
+    });
+  },
+
+  removeMembro: async (usuarioId) => {
+    return await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { familiaId: null },
+      select: { id: true, nome: true, email: true, role: true },
+    });
+  },
+
+  getMembros: async (familiaId) => {
+    return await prisma.usuario.findMany({
+      where: { familiaId },
+      select: { id: true, nome: true, email: true, role: true },
+    });
   },
 };

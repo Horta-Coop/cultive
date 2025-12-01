@@ -10,11 +10,11 @@ import {
   Search,
   Table,
   LayoutGrid,
+  Eye,
 } from "lucide-react";
 import StatCard from "@/components/ui/StatCard";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormModal } from "@/components/ui/FormModal";
@@ -23,93 +23,44 @@ import colheitaSchema from "@/lib/validation/colheitaSchema";
 import ResponsiveGrid from "@/components/ui/ResponsiveGrid";
 import FloatingButton from "@/components/layout/FloatingActionButton";
 import Badge from "@/components/ui/Badge";
+import SmartDropdown from "../../components/ui/SmartDropdown";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
 
-// dentro de ColheitasPage
-const getDestinoVariant = (destino) => {
-  if (!destino) return "outline";
-
-  const lower = destino.toLowerCase();
-
-  if (lower.includes("consumo")) return "primary";
-  if (lower.includes("doação") || lower.includes("doacao")) return "success";
-  if (lower.includes("venda")) return "warning";
-
-  return "outline";
-};
+import { useColheitaStore } from "@/stores/useColheitaStore";
+import { usePlantioStore } from "@/stores/usePlantioStore";
+import { useUserStore } from "@/stores/useUserStore";
+import {
+  EDestinoColheita,
+  EUnidadeMedida,
+} from "../../lib/validation/colheitaSchema";
 
 const ColheitasPage = () => {
   const modalRef = useRef(null);
-  const [colheitas, setColheitas] = useState([
-    {
-      id: "1",
-      cultura: "Alface",
-      dataColheita: "2023-04-01",
-      quantidadeColhida: 10,
-      unidadeMedida: "kg",
-      destinoColheita: "Consumo interno",
-      observacoes: "Folhas saudáveis e frescas",
-    },
-    {
-      id: "2",
-      cultura: "Tomate",
-      dataColheita: "2023-03-10",
-      quantidadeColhida: 5,
-      unidadeMedida: "kg",
-      destinoColheita: "Venda local",
-      observacoes: "Alguns frutos com pequenas manchas",
-    },
-    {
-      id: "3",
-      cultura: "Cenoura",
-      dataColheita: "2023-02-20",
-      quantidadeColhida: 20,
-      unidadeMedida: "maços",
-      destinoColheita: "Doação",
-      observacoes: "Raízes firmes e uniformes",
-    },
-  ]);
-
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [viewMode, setViewMode] = useState(isMobile ? "cards" : "table");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [destinoFilter, setDestinoFilter] = useState("");
   const [culturaFilter, setCulturaFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [viewMode, setViewMode] = useState(isMobile ? "cards" : "table");
+  const [loadingPlantios, setLoadingPlantios] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [editingColheita, setEditingColheita] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const plantiosCadastrados = useMemo(
-    () => [
-      {
-        id: "1",
-        cultura: "Alface Crespa",
-        tipoPlantacao: "Orgânico",
-        dataInicio: "2023-05-10",
-        previsaoColheita: "2023-06-24",
-        quantidadePlantada: 10.5,
-        unidadeMedida: "kg",
-        observacoes: "Plantio em canteiro 3",
-        participacaoScore: 80,
-        status: "ativo",
-        hortaId: "1",
-      },
-      {
-        id: "2",
-        cultura: "Cenoura Brasília",
-        tipoPlantacao: "Convencional",
-        dataInicio: "2023-04-15",
-        previsaoColheita: "2023-07-14",
-        quantidadePlantada: 20,
-        unidadeMedida: "kg",
-        observacoes: "",
-        participacaoScore: 60,
-        status: "ativo",
-        hortaId: "2",
-      },
-    ],
-    []
-  );
+  const {
+    colheitas,
+    fetchColheitas,
+    createColheita,
+    updateColheita,
+    deleteColheita,
+    loading,
+  } = useColheitaStore();
+
+  const { plantios, fetchPlantios } = usePlantioStore();
+  const { user } = useUserStore();
 
   const form = useForm({
     resolver: zodResolver(colheitaSchema),
@@ -118,7 +69,7 @@ const ColheitasPage = () => {
       dataColheita: "",
       quantidadeColhida: "",
       unidadeMedida: "",
-      destinoColheita: "",
+      destinoColheita: "consumo",
       observacoes: "",
       plantioId: "",
     },
@@ -128,77 +79,33 @@ const ColheitasPage = () => {
 
   const { reset } = form;
 
-  const handleAddColheita = (data) => {
-    const plantioSelecionado = plantiosCadastrados.find(
-      (p) => p.id === data.plantioId
-    );
+  useEffect(() => {
+    fetchColheitas();
+  }, []);
 
-    const novaColheita = {
-      id: crypto.randomUUID(),
-      ...data,
-      cultura: data.cultura || plantioSelecionado.cultura,
-      dataColheita: data.dataColheita
-        ? new Date(data.dataColheita)
-        : new Date(),
-      quantidadeColhida: parseFloat(data.quantidadeColhida),
-      unidadeMedida:
-        data.unidadeMedida || plantioSelecionado.unidadeMedida || "kg",
-      destinoColheita: data.destinoColheita || "consumo",
-      observacoes: data.observacoes || "",
-      plantioId: plantioSelecionado.id,
-      plantio: plantioSelecionado,
-    };
+  useEffect(() => {
+    const selectedPlantioId = form.watch("plantioId");
 
-    setColheitas((prev) => [...prev, novaColheita]);
-    toast.success("Colheita registrada com sucesso!");
-    reset();
-    modalRef.current?.close();
-  };
+    if (!selectedPlantioId) return;
 
-  const filteredColheitas = useMemo(() => {
-    return colheitas.filter((c) => {
-      const query = searchQuery.toLowerCase();
+    const selectedPlantio = plantios.find((p) => p.id === selectedPlantioId);
 
-      const matchesSearch =
-        c.cultura.toLowerCase().includes(query) ||
-        c.destinoColheita.toLowerCase().includes(query) ||
-        c.unidadeMedida.toLowerCase().includes(query) ||
-        c.plantio?.horta?.nome?.toLowerCase().includes(query);
-
-      const matchesCultura = culturaFilter
-        ? c.cultura.toLowerCase() === culturaFilter.toLowerCase()
-        : true;
-
-      const matchesDate = dateFilter
-        ? new Date(c.dataColheita).toISOString().split("T")[0] === dateFilter
-        : true;
-
-      const matchesDestino = typeFilter
-        ? c.destinoColheita.toLowerCase() === typeFilter.toLowerCase()
-        : true;
-
-      return matchesSearch && matchesCultura && matchesDate && matchesDestino;
-    });
-  }, [colheitas, searchQuery, typeFilter, culturaFilter, dateFilter]);
-
-  const handleEditColheita = (plantio) =>
-    console.log("Editar plantio:", plantio);
-
-  const handleDeleteColheita = (id) =>
-    setColheitas(colheitas.filter((p) => p.id !== id));
+    if (selectedPlantio) {
+      form.setValue("cultura", selectedPlantio.cultura, {
+        shouldValidate: true,
+        shouldDirty: true,
+      });
+    }
+  }, [form, plantios]);
 
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      if (mobile) {
-        setViewMode("cards");
-      }
+      if (mobile) setViewMode("cards");
     };
-
     handleResize();
     window.addEventListener("resize", handleResize);
-
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
@@ -209,39 +116,151 @@ const ColheitasPage = () => {
 
       const isMedium = window.innerWidth < 1024;
 
-      if (!sidebarOpenState && !isMobile) {
-        setViewMode("table");
-      }
-
-      if (sidebarOpenState && isMedium) {
-        setViewMode("cards");
-      }
+      if (!sidebarOpenState && !isMobile) setViewMode("table");
+      if (sidebarOpenState && isMedium) setViewMode("cards");
     };
 
     window.addEventListener("sidebar-toggle", handleSidebarToggle);
     return () =>
       window.removeEventListener("sidebar-toggle", handleSidebarToggle);
-  }, [isMobile, setViewMode]);
+  }, [isMobile]);
 
-  const plantioSelecionadoId = form.watch("plantioId");
-  useEffect(() => {
-    if (!plantioSelecionadoId) {
-      form.setValue("cultura", "", { shouldValidate: true });
-      return;
+  const handleOpenModal = async (colheita = null) => {
+    setModalLoading(true);
+
+    try {
+      setEditingColheita(colheita);
+
+      if (!plantios || plantios.length === 0) {
+        setLoadingPlantios(true);
+        await fetchPlantios();
+        setLoadingPlantios(false);
+      }
+
+      reset({
+        cultura: colheita?.cultura || "",
+        dataColheita: colheita?.dataColheita
+          ? new Date(colheita.dataColheita).toISOString().split("T")[0]
+          : "",
+        quantidadeColhida: colheita?.quantidadeColhida + "" || "",
+        unidadeMedida: colheita?.unidadeMedida || "",
+        destinoColheita: colheita?.destinoColheita || "consumo interno",
+        observacoes: colheita?.observacoes || "",
+        plantioId: colheita?.plantioId || "",
+      });
+
+      modalRef.current?.open();
+    } catch (err) {
+      console.error("Erro ao preparar formulário de colheita:", err);
+      toast.error("Erro ao preparar formulário de colheita");
+    } finally {
+      setModalLoading(false);
     }
+  };
 
-    const plantio = plantiosCadastrados.find(
-      (p) => p.id === plantioSelecionadoId
+  const handleSaveColheita = async (data) => {
+    setSaving(true);
+
+    const dataToSave = {
+      ...data,
+      dataColheita: data.dataColheita,
+      quantidadeColhida: parseFloat(data.quantidadeColhida),
+    };
+
+    try {
+      if (editingColheita) {
+        await updateColheita(editingColheita.id, dataToSave);
+      } else {
+        await createColheita(dataToSave);
+      }
+
+      modalRef.current?.close();
+      setEditingColheita(null);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message ||
+        "Falha ao salvar a colheita. Tente novamente.";
+      console.error("Erro ao salvar colheita:", err);
+      toast.error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteColheita = async (id) => {
+    const confirmDelete = window.confirm(
+      "Tem certeza que deseja excluir este registro de colheita? Esta ação é irreversível."
     );
+    if (!confirmDelete) return;
 
-    if (plantio) {
-      form.setValue("cultura", plantio.cultura, { shouldValidate: true });
+    try {
+      await deleteColheita(id);
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message ||
+        "Falha ao excluir a colheita. Tente novamente.";
+      console.error("Erro ao excluir colheita:", err);
+      toast.error(errorMessage);
     }
-  }, [plantioSelecionadoId, form, plantiosCadastrados]);
+  };
+
+  const filteredColheitas = useMemo(() => {
+    return colheitas
+      .filter((c) => c && typeof c === "object")
+      .filter((c) => {
+        const query = searchQuery.toLowerCase();
+
+        const matchesSearch =
+          c.cultura.toLowerCase().includes(query) ||
+          c.destinoColheita.toLowerCase().includes(query) ||
+          c.observacoes?.toLowerCase().includes(query);
+
+        const matchesCultura = culturaFilter
+          ? c.cultura.toLowerCase() === culturaFilter.toLowerCase()
+          : true;
+
+        const matchesDate = dateFilter
+          ? new Date(c.dataColheita).toISOString().split("T")[0] === dateFilter
+          : true;
+
+        const matchesDestino = destinoFilter
+          ? c.destinoColheita.toLowerCase() === destinoFilter.toLowerCase()
+          : true;
+
+        return matchesSearch && matchesCultura && matchesDate && matchesDestino;
+      });
+  }, [colheitas, searchQuery, destinoFilter, culturaFilter, dateFilter]);
+
+  const totalQuantity = filteredColheitas.reduce(
+    (acc, c) => acc + (c.quantidadeColhida || 0),
+    0
+  );
+  const unitsSet = new Set(
+    filteredColheitas.map((c) => c.unidadeMedida).filter(Boolean)
+  );
+  const unitsUsed = unitsSet.size > 0 ? [...unitsSet].join("/") : "kg";
+
+  const lastHarvestDate =
+    filteredColheitas.length > 0
+      ? new Date(
+          Math.max(...filteredColheitas.map((c) => new Date(c.dataColheita)))
+        ).toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "—";
+
+  const canEditOrDelete = user.role === "admin" || user.role === "gestor";
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 relative">
-      <Toaster position="top-right" />
+      <LoadingOverlay loading={loading} message="Carregando colheitas..." />
+      <LoadingOverlay
+        loading={modalLoading}
+        message="Preparando formulário..."
+      />
+
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
@@ -249,343 +268,406 @@ const ColheitasPage = () => {
             Registro de Colheitas
           </h1>
           <p className="text-base-content/70 mt-1">
-            Acompanhe e registre as colheitas realizadas nas hortas
-            comunitárias.
+            Acompanhe e gerencie as colheitas realizadas no sistema.
           </p>
         </div>
-        <Button onClick={() => modalRef.current?.open()} icon={Plus}>
-          Adicionar Colheita
-        </Button>
+        {canEditOrDelete && (
+          <Button onClick={() => handleOpenModal(null)} icon={Plus}>
+            Adicionar Colheita
+          </Button>
+        )}
       </div>
 
-      {/* Stats */}
-      <ResponsiveGrid>
-        <StatCard
-          title="Colheitas Totais"
-          value={colheitas.length}
-          description="Quantidade de colheitas registradas"
-          icon={<Sprout className="h-6 w-6 text-primary" />}
-        />
+      {/* Estatísticas */}
+      {!loading && (
+        <>
+          <ResponsiveGrid columns={4}>
+            <StatCard
+              title="Colheitas Totais"
+              value={colheitas.length.toString()}
+              description="Colheitas registradas"
+              icon={<Sprout className="h-6 w-6" />}
+            />
+            <StatCard
+              title="Quantidade Total"
+              value={`${totalQuantity} ${unitsUsed}`}
+              description="Quantidade total colhida"
+              icon={<Scale className="h-6 w-6" />}
+            />
+            <StatCard
+              title="Última Colheita"
+              value={lastHarvestDate}
+              description="Data da colheita mais recente"
+              icon={<Calendar className="h-6 w-6" />}
+              smallValue
+            />
+            <StatCard
+              title="Destinos Diferentes"
+              value={new Set(
+                colheitas.map((c) => c.destinoColheita).filter(Boolean)
+              ).size.toString()}
+              description="Para onde a produção foi"
+              icon={<Truck className="h-6 w-6" />}
+            />
+          </ResponsiveGrid>
 
-        <StatCard
-          title="Quantidade Total"
-          value={`${colheitas.reduce(
-            (acc, c) => acc + (c.quantidadeColhida || 0),
-            0
-          )} ${colheitas[0]?.unidadeMedida || "kg"}`}
-          description="Quantidade total colhida"
-          icon={<Scale className="h-6 w-6 text-primary" />}
-        />
+          {/* Filtros e Busca (Mantidos) */}
+          <div className="flex flex-col gap-4 mt-6 mb-4">
+            <div className="flex items-center gap-2 px-4 py-2 border border-base-300 rounded-lg shadow-sm bg-base-100 w-full">
+              <Search className="h-4 w-4 text-primary/70" />
+              <input
+                type="text"
+                className="grow bg-transparent focus:outline-none text-base-content"
+                placeholder="Buscar por cultura, destino ou observações..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-        <StatCard
-          title="Última Colheita"
-          value={
-            colheitas.length > 0
-              ? new Date(
-                  Math.max(...colheitas.map((c) => new Date(c.dataColheita)))
-                ).toLocaleDateString("pt-BR", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })
-              : "—"
-          }
-          icon={<Calendar className="h-6 w-6 text-primary" />}
-          smallValue
-        />
+            {/* Filtros Dropdown/Data */}
+            <div className="flex flex-wrap gap-2">
+              {/* Filtro por Data */}
+              <input
+                type="date"
+                className="input input-bordered flex-1 w-full sm:w-auto rounded-lg text-base-content/70"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              />
 
-        <StatCard
-          title="Destinos Diferentes"
-          value={new Set(colheitas.map((c) => c.destinoColheita)).size}
-          description="Quantidade de destinos diferentes"
-          icon={<Truck className="h-6 w-6 text-primary" />}
-        />
-      </ResponsiveGrid>
+              {/* Filtro por Cultura */}
+              <select
+                className="select select-bordered flex-1 w-full sm:w-auto rounded-lg text-base-content/70"
+                value={culturaFilter}
+                onChange={(e) => setCulturaFilter(e.target.value)}
+              >
+                <option value="">Todas as Culturas</option>
+                {[...new Set(colheitas.map((c) => c.cultura))].map(
+                  (cultura) => (
+                    <option key={cultura} value={cultura}>
+                      {cultura}
+                    </option>
+                  )
+                )}
+              </select>
 
-      {/* Filtros */}
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center gap-2 px-4 py-2 border border-base-300 rounded-lg shadow-sm bg-base-100 w-full">
-          <Search className="h-4 w-4 text-primary/70" />
-          <input
-            type="text"
-            placeholder="Buscar por cultura, destino ou observações..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="grow bg-base-100 focus:outline-none text-base-content"
-          />
-        </div>
+              {/* Filtro por Destino */}
+              <select
+                className="select select-bordered flex-1 w-full sm:w-auto rounded-lg text-base-content/70"
+                value={destinoFilter}
+                onChange={(e) => setDestinoFilter(e.target.value)}
+              >
+                <option value="">Todos os Destinos</option>
+                {[...new Set(colheitas.map((c) => c.destinoColheita))].map(
+                  (destino) => (
+                    <option key={destino} value={destino}>
+                      {destino}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+          </div>
 
-        <div className="flex flex-wrap gap-2">
-          <input
-            type="date"
-            className="input input-bordered flex-1 w-full sm:w-auto rounded-lg"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          />
+          {/* Botões de visualização (Mantidos) */}
+          <div className="flex justify-start gap-2 mb-4">
+            <button
+              className={`btn btn-sm ${
+                viewMode === "table"
+                  ? "btn-primary"
+                  : "btn-outline border-base-300"
+              }`}
+              onClick={() => setViewMode("table")}
+              disabled={isMobile || sidebarOpen}
+            >
+              <Table className="h-4 w-4 mr-1" /> Tabela
+            </button>
+            <button
+              className={`btn btn-sm ${
+                viewMode === "cards"
+                  ? "btn-primary"
+                  : "btn-outline border-base-300"
+              }`}
+              onClick={() => setViewMode("cards")}
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" /> Cards
+            </button>
+          </div>
 
-          <select
-            className="select select-bordered flex-1 w-full sm:w-auto rounded-lg"
-            value={culturaFilter || ""}
-            onChange={(e) => setCulturaFilter(e.target.value || "")}
-          >
-            <option value="">Filtrar por cultura</option>
-            {[...new Set(colheitas.map((c) => c.cultura))].map((cultura) => (
-              <option key={cultura} value={cultura}>
-                {cultura}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex justify-start gap-2 mb-4">
-        <button
-          className={`btn btn-sm ${
-            viewMode === "table" ? "btn-primary" : "btn-outline border-base-300"
-          }`}
-          onClick={() => setViewMode("table")}
-          disabled={isMobile || sidebarOpen}
-        >
-          <Table className="h-4 w-4 mr-1" /> Tabela
-        </button>
-        <button
-          className={`btn btn-sm ${
-            viewMode === "cards" ? "btn-primary" : "btn-outline border-base-300"
-          }`}
-          onClick={() => setViewMode("cards")}
-        >
-          <LayoutGrid className="h-4 w-4 mr-1" /> Cards
-        </button>
-      </div>
-
-      {/* Conteúdo */}
-      {viewMode === "table" ? (
-        <div className="w-full overflow-x-auto shadow-xl rounded-xl border border-base-200">
-          <div className="hidden md:block">
-            <table className="table w-full table-zebra table-fixed whitespace-normal break-words">
-              <thead>
-                <tr>
-                  {[
-                    "Cultura",
-                    "Destino",
-                    "Data Colheita",
-                    "Quantidade",
-                    "Unidade",
-                    "Observações",
-                    "Ações",
-                  ].map((col) => (
-                    <th
-                      key={col}
-                      className="text-xs uppercase font-semibold tracking-wider whitespace-normal break-words text-center"
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredColheitas.length > 0 ? (
-                  filteredColheitas.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="hover:bg-base-100/50 transition-colors"
-                    >
-                      <td className="font-semibold">{c.cultura}</td>
-                      <td>
-                        <Badge
-                          variant={getDestinoVariant(c.destinoColheita)}
-                          size="sm"
+          {/* Renderização da lista */}
+          {viewMode === "table" ? (
+            <div className="overflow-x-auto shadow-xl rounded-xl border border-base-200">
+              <table className="table w-full table-zebra table-fixed">
+                <thead>
+                  <tr>
+                    {[
+                      "Cultura",
+                      "Destino",
+                      "Data Colheita",
+                      "Quantidade",
+                      "Observações",
+                      "Ações",
+                    ]
+                      .filter(Boolean)
+                      .map((col) => (
+                        <th
+                          key={col}
+                          className="text-xs uppercase font-semibold tracking-wider"
                         >
-                          {c.destinoColheita}
-                        </Badge>
-                      </td>
-
-                      <td>
-                        {new Date(c.dataColheita).toLocaleDateString("pt-BR")}
-                      </td>
-                      <td>{c.quantidadeColhida}</td>
-                      <td>{c.unidadeMedida}</td>
-                      <td className="truncate max-w-[150px]">
-                        {c.observacoes || "-"}
-                      </td>
-
-                      <td className="flex flex-col items-center gap-2">
-                        <button
-                          className="btn btn-ghost btn-sm text-primary/80 hover:text-primary"
-                          onClick={() => handleEditColheita(c)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                          onClick={() => handleDeleteColheita(c.id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </button>
+                          {col}
+                        </th>
+                      ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredColheitas.length > 0 ? (
+                    filteredColheitas.map((c) => (
+                      <tr key={c.id}>
+                        <td>{c.cultura}</td>
+                        <td>
+                          <Badge type={c.destinoColheita}>
+                            {c.destinoColheita}
+                          </Badge>
+                        </td>
+                        <td>
+                          {new Date(c.dataColheita).toLocaleDateString("pt-BR")}
+                        </td>
+                        <td>
+                          {c.quantidadeColhida} {c.unidadeMedida}
+                        </td>
+                        <td>{c.observacoes || "-"}</td>
+                        <td>
+                          <SmartDropdown
+                            buttonClass="btn btn-ghost btn-sm text-base-content/70"
+                            items={[
+                              {
+                                icon: <Eye className="h-4 w-4" />,
+                                label: "Visualizar",
+                                onClick: () =>
+                                  toast("Visualizar não implementado"),
+                              },
+                              ...(canEditOrDelete
+                                ? [
+                                    {
+                                      label: "Editar",
+                                      icon: <Edit className="h-4 w-4" />,
+                                      onClick: () => handleOpenModal(c),
+                                    },
+                                    {
+                                      label: "Excluir",
+                                      icon: <Trash className="h-4 w-4" />,
+                                      danger: true,
+                                      onClick: () => handleDeleteColheita(c.id),
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="py-6 text-base-content/60 italic"
+                      >
+                        Nenhum registro de colheita encontrado.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="text-center py-6 text-base-content/60 italic"
-                    >
-                      Nenhuma colheita encontrada.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredColheitas.length > 0 ? (
-            filteredColheitas.map((c) => (
-              <div
-                key={c.id}
-                className="p-4 border border-base-200 rounded-xl shadow-md hover:shadow-lg transition-shadow flex flex-col gap-2 relative bg-base-100"
-              >
-                <div className="absolute top-2 right-2 flex flex-col gap-1">
-                  <button
-                    className="btn btn-ghost btn-sm text-primary/80 hover:text-primary"
-                    onClick={() => handleEditColheita(c)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm text-error/80 hover:text-error"
-                    onClick={() => handleDeleteColheita(c.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </button>
-                </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredColheitas.map((c) => (
+                <div
+                  key={c.id}
+                  className="p-4 border border-base-200 rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
+                >
+                  {/* Dropdown dos cards */}
+                  <div className="absolute top-2 right-2">
+                    <SmartDropdown
+                      buttonClass="btn btn-ghost btn-xs text-base-content/70"
+                      items={[
+                        {
+                          icon: <Eye className="h-4 w-4" />,
+                          label: "Visualizar",
+                          onClick: () => toast("Visualizar não implementado"),
+                        },
+                        ...(canEditOrDelete
+                          ? [
+                              {
+                                label: "Editar",
+                                icon: <Edit className="h-4 w-4" />,
+                                onClick: () => handleOpenModal(c),
+                              },
+                              {
+                                label: "Excluir",
+                                icon: <Trash className="h-4 w-4" />,
+                                danger: true,
+                                onClick: () => handleDeleteColheita(c.id),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
+                  </div>
 
-                <div className="font-bold text-lg">{c.cultura}</div>
-                <div className="text-xs opacity-60 flex items-center gap-1">
-                  {c.plantio?.horta?.nome}
-                </div>
-
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge
-                    variant={getDestinoVariant(c.destinoColheita)}
-                  >
-                    {c.destinoColheita}
-                  </Badge>
-                </div>
-
-                <div className="flex flex-col gap-1 text-sm mt-2">
-                  <div className="flex gap-1">
-                    <span className="font-medium">Data Colheita:</span>{" "}
+                  <div className="font-bold text-lg">{c.cultura}</div>
+                  <div className="text-sm text-base-content/70">
+                    {c.quantidadeColhida} {c.unidadeMedida} -{" "}
                     {new Date(c.dataColheita).toLocaleDateString("pt-BR")}
                   </div>
-                  <div className="flex gap-1">
-                    <span className="font-medium">Quantidade:</span>{" "}
-                    {c.quantidadeColhida} {c.unidadeMedida}
+                  <div className="text-sm mt-1">
+                    {c.observacoes || "Usuário não informado"}
                   </div>
-                  {c.observacoes && (
-                    <div className="flex gap-1">
-                      <span className="font-medium">Obs:</span> {c.observacoes}
-                    </div>
-                  )}
+
+                  <div className="mt-2">
+                    <Badge type={c.destinoColheita}>{c.destinoColheita}</Badge>
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-6 text-base-content/60 italic">
-              Nenhuma colheita encontrada.
+              ))}
+              {filteredColheitas.length === 0 && (
+                <p className="py-6 text-base-content/60 italic col-span-full">
+                  Nenhum registro de colheita encontrado.
+                </p>
+              )}
             </div>
           )}
-        </div>
+
+          <FormModal
+            ref={modalRef}
+            title={editingColheita ? "Editar Colheita" : "Registrar Colheita"}
+            onSubmit={form.handleSubmit(handleSaveColheita)}
+            submitLabel={
+              saving
+                ? "Salvando..."
+                : editingColheita
+                ? "Salvar Alterações"
+                : "Registrar Colheita"
+            }
+            submitLoading={saving}
+          >
+            {loadingPlantios ? (
+              <p className="text-center text-base-content/60 italic py-4">
+                Carregando plantios...
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-sm font-medium">
+                    Plantio de Origem (opcional)
+                  </label>
+                  <FormField
+                    type="searchable-select"
+                    placeholder="Selecione o Plantio"
+                    name="plantioId"
+                    control={form.control}
+                    options={plantios.map((p) => ({
+                      value: p.id,
+                      label: p.cultura,
+                    }))}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-sm font-medium">
+                    Cultura Colhida <span className="text-error">*</span>
+                  </label>
+                  <FormField
+                    type="input"
+                    placeholder="Ex: Tomate, Alface"
+                    name="cultura"
+                    control={form.control}
+                    disabled={!!form.watch("plantioId")}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium">
+                    Data da Colheita <span className="text-error">*</span>
+                  </label>
+                  <FormField
+                    type="date"
+                    name="dataColheita"
+                    control={form.control}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium">
+                    Quantidade <span className="text-error">*</span>
+                  </label>
+                  <FormField
+                    type="number"
+                    placeholder="Ex: 5.5"
+                    name="quantidadeColhida"
+                    control={form.control}
+                  />
+                </div>
+
+                <div className="flex gap-4 w-full">
+                  <div className="flex flex-col gap-1 flex-1">
+                    <label className="text-sm font-medium">
+                      Unidade <span className="text-error">*</span>
+                    </label>
+                    <FormField
+                      type="select"
+                      name="unidadeMedida"
+                      placeholder="Unidade de Medida"
+                      control={form.control}
+                      options={EUnidadeMedida.options.map((u) => ({
+                        value: u,
+                        label:
+                          u.charAt(0).toUpperCase() +
+                          u.slice(1).replace("_", " "),
+                      }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-sm font-medium">
+                    Destino da Colheita <span className="text-error">*</span>
+                  </label>
+                  <FormField
+                    type="select"
+                    name="destinoColheita"
+                    control={form.control}
+                    placeholder="Destino da Colheita"
+                    options={EDestinoColheita.options.map((d) => ({
+                      value: d,
+                      label:
+                        d.charAt(0).toUpperCase() +
+                        d.slice(1).replace("_", " "),
+                    }))}
+                  />
+                </div>
+
+                <div className="md:col-span-2 flex flex-col gap-1 w-full">
+                  <label className="text-sm font-medium">Observações</label>
+                  <FormField
+                    type="textarea"
+                    placeholder="Detalhes adicionais sobre a colheita..."
+                    name="observacoes"
+                    control={form.control}
+                  />
+                </div>
+              </>
+            )}
+          </FormModal>
+
+          {/* Floating Button (Só aparece se puder editar) */}
+          {canEditOrDelete && (
+            <FloatingButton
+              onClick={() => handleOpenModal(null)}
+              tooltip="Adicionar Colheita"
+              icon={<Plus className="h-6 w-6 md:h-7 md:w-7" />}
+            />
+          )}
+        </>
       )}
-
-      <FormModal
-        ref={modalRef}
-        title="Adicionar Colheita"
-        onSubmit={form.handleSubmit(handleAddColheita)}
-        submitLabel="Registrar Colheita"
-      >
-        <FormField
-          type="searchable-select"
-          placeholder="Selecione o Plantio"
-          name="plantioId"
-          control={form.control}
-          options={plantiosCadastrados.map((p) => ({
-            value: p.id,
-            label: p.cultura, // nome da cultura
-          }))}
-        />
-
-        {/* Cultura colhida */}
-        <FormField
-          type="input"
-          placeholder="Cultura (preenchida pelo plantio)"
-          name="cultura"
-          control={form.control}
-          className="md:col-span-2"
-          disabled // não permite edição
-        />
-
-        {/* Data da colheita */}
-        <FormField
-          type="date"
-          placeholder="Data da Colheita"
-          name="dataColheita"
-          control={form.control}
-        />
-
-        {/* Quantidade colhida */}
-        <FormField
-          type="number"
-          placeholder="Quantidade Colhida"
-          name="quantidadeColhida"
-          control={form.control}
-        />
-
-        {/* Unidade de medida */}
-        <FormField
-          type="select"
-          placeholder="Unidade de Medida"
-          name="unidadeMedida"
-          control={form.control}
-          options={[
-            { value: "kg", label: "kg" },
-            { value: "maços", label: "maços" },
-            { value: "unidades", label: "unidades" },
-          ]}
-        />
-
-        {/* Destino da colheita */}
-        <FormField
-          type="select"
-          placeholder="Destino da Colheita"
-          name="destinoColheita"
-          control={form.control}
-          options={[
-            { value: "Consumo", label: "Consumo" },
-            { value: "Doação", label: "Doação" },
-            { value: "Venda", label: "Venda" },
-          ]}
-        />
-
-        {/* Observações */}
-        <FormField
-          type="textarea"
-          placeholder="Observações (opcional)"
-          name="observacoes"
-          control={form.control}
-          className="md:col-span-2"
-        />
-      </FormModal>
-
-      <FloatingButton
-        onClick={() => modalRef.current?.open()}
-        tooltip="Adicionar Plantio"
-        icon={<Plus className="h-6 w-6 md:h-7 md:w-7" />}
-      />
     </div>
   );
 };

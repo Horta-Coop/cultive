@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Leaf,
@@ -13,94 +13,171 @@ import {
   ClipboardList,
   CheckCircle2,
 } from "lucide-react";
-import StatCard from "../../components/ui/StatCard";
+import StatCard from "@/components/ui/StatCard";
+
+// Importando suas stores separadas
+import { useHortaStore } from "@/stores/useHortaStore";
+import { usePlantioStore } from "@/stores/usePlantioStore";
+import { useColheitaStore } from "@/stores/useColheitaStore";
+import { useFamiliaStore } from "@/stores/useFamiliaStore";
+import { useUserStore } from "@/stores/useUserStore";
+
+const formatDate = (dateISO) => {
+  if (!dateISO) return "N/A";
+  const date = new Date(dateISO);
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 const DashboardGestor = () => {
-  const gestor = {
-    nome: "Kainã Magdiel",
-    hortasGestor: 3,
-    familiasGestor: 12,
-    plantiosAtivos: 24,
-    colheitasRecentes: 8,
-    notificacoesPendentes: 5,
-  };
+  const {user} = useUserStore();
+  const { hortas, fetchHortas } = useHortaStore();
+  const { plantios, fetchPlantios } = usePlantioStore();
+  const { colheitas, fetchColheitas } = useColheitaStore();
+  const { familias, fetchFamilias } = useFamiliaStore();
 
-  const plantiosAtrasados = [
-    { nome: "Alface - Horta Central", diasAtraso: 4 },
-    { nome: "Cenoura - Horta Vila Verde", diasAtraso: 2 },
-  ];
+  useEffect(() => {
+    fetchHortas();
+    fetchPlantios();
+    fetchColheitas();
+    fetchFamilias();
+  }, []);
 
-  const familiasPoucoAtivas = [
-    { nome: "Família Souza", participacoes: 1 },
-    { nome: "Família Lima", participacoes: 2 },
-  ];
 
-  const voluntariosPoucoAtivos = [
-    { nome: "Lucas", diasDisponiveis: 1 },
-    { nome: "Marina", diasDisponiveis: 2 },
-  ];
+  const gestorStats = useMemo(() => {
+    const hortasDoGestor = hortas.filter((h) => h.gestor.id === user?.id);
+    const hortaIds = hortasDoGestor.map((h) => h._id || h.id);
 
-  const proximasColheitas = [
-    { nome: "Tomate - Horta Central", data: "08/11/2025" },
-    { nome: "Couve - Horta Esperança", data: "10/11/2025" },
-  ];
+    const plantiosAtivos = plantios.filter(
+      (p) => hortaIds.includes(p.horta.id) && !p.dataColheita
+    );
 
-  const proximosAvisos = [
-    { titulo: "Mutirão de limpeza", data: "07/11/2025" },
-    { titulo: "Reunião com famílias", data: "12/11/2025" },
-  ];
+    const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const colheitasRecentes = colheitas.filter(
+      (c) =>
+        c.horta.id &&
+        hortaIds.includes(c.horta.id)
+    );
 
-  const colheitasRecentes = [
-    { nome: "Rúcula", quantidade: "3kg", data: "04/11/2025" },
-    { nome: "Cenoura", quantidade: "5kg", data: "03/11/2025" },
-  ];
+    const hoje = new Date();
+
+    const plantiosAtrasados = plantiosAtivos
+      .filter((p) => p.previsaoColheita && new Date(p.previsaoColheita) < hoje)
+      .map((p) => {
+        const horta = hortas.find(
+          (h) => h._id === p.hortaId || h.id === p.hortaId
+        );
+        return {
+          nome: `${p.cultura || "Plantio"} - ${horta?.nome || "Horta"}`,
+          diasAtraso: Math.ceil(
+            (hoje - new Date(p.previsaoColheita)) / (1000 * 60 * 60 * 24)
+          ),
+        };
+      })
+      .slice(0, 5);
+
+    const proximasColheitas = plantiosAtivos
+      .filter((p) => p.previsaoColheita && new Date(p.previsaoColheita) > hoje)
+      .map((p) => {
+        const horta = hortas.find(
+          (h) => h._id === p.hortaId || h.id === p.hortaId
+        );
+        return {
+          nome: `${p.cultura || "Plantio"} - ${horta?.nome || "Horta"}`,
+          data: formatDate(p.previsaoColheita),
+        };
+      })
+      .slice(0, 5);
+
+    const ultimasColheitas = colheitasRecentes
+      .sort((a, b) => new Date(b.dataColheita) - new Date(a.dataColheita))
+      .slice(0, 5)
+      .map((c) => ({
+        nome: c.cultura || "Colheita",
+        quantidade: `${c.quantidadeColhida || 0}${c.unidadeMedida || "kg"}`,
+        data: formatDate(c.dataColheita),
+      }));
+
+    return {
+      nomeGestor: user?.nome || "Gestor",
+      hortasGestor: hortasDoGestor.length,
+      familiasGestor: familias.length,
+      plantiosAtivos: plantiosAtivos.length,
+      colheitasRecentes: colheitasRecentes.length,
+      notificacoesPendentes: 5,
+      plantiosAtrasados,
+      proximasColheitas,
+      ultimasColheitasLista: ultimasColheitas,
+      proximosAvisos: [
+        { titulo: "Mutirão de limpeza", data: "07/12/2025" },
+        { titulo: "Reunião com famílias", data: "12/12/2025" },
+      ],
+    };
+  }, [user, hortas, plantios, colheitas, familias]);
+
+  const { plantiosAtrasados, proximasColheitas, ultimasColheitasLista } =
+    gestorStats;
 
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* ================= INDICADORES GERAIS ================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 className="text-3xl font-bold mb-8">
+        Olá, {gestorStats.nomeGestor}! 👋
+      </h1>
+
+      {/* Estatísticas principais */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
         <StatCard
           title="Hortas sob gestão"
-          value={gestor.hortasGestor}
+          value={gestorStats.hortasGestor}
           description="Você é responsável por essas hortas"
-          icon={<Leaf />}
+          icon={<Leaf className="h-6 w-6 text-primary" />}
         />
+
         <StatCard
           title="Famílias sob gestão"
-          value={gestor.familiasGestor}
+          value={gestorStats.familiasGestor}
           description="Participando das suas hortas"
-          icon={<Users />}
+          icon={<Users className="h-6 w-6 text-primary" />}
         />
+
         <StatCard
           title="Plantios ativos"
-          value={gestor.plantiosAtivos}
-          description="Em andamento nas hortas sob sua gestão"
-          icon={<Sprout />}
+          value={gestorStats.plantiosAtivos}
+          description="Em andamento nas suas hortas"
+          icon={<Sprout className="h-6 w-6 text-primary" />}
         />
+
         <StatCard
           title="Colheitas recentes"
-          value={gestor.colheitasRecentes}
-          description="Registradas recentemente"
-          icon={<BarChart3 />}
+          value={gestorStats.colheitasRecentes}
+          description="Registradas nos últimos 30 dias"
+          icon={<BarChart3 className="h-6 w-6 text-primary" />}
         />
+
         <StatCard
           title="Notificações pendentes"
-          value={gestor.notificacoesPendentes}
-          description="Aguardando revisão"
-          icon={<AlertTriangle />}
+          value={gestorStats.notificacoesPendentes}
+          description="Aguardando sua revisão"
+          icon={<AlertTriangle className="h-6 w-6 text-warning" />}
         />
       </div>
 
-      {/* ================= ALERTAS INTELIGENTES ================= */}
+      {/* Alertas */}
       <div className="space-y-4 mb-10">
-        {plantiosAtrasados.length > 0 && (
+        <h2 className="text-2xl font-semibold">Alertas de Atenção 🚨</h2>
+
+        {plantiosAtrasados.length > 0 ? (
           <div className="alert alert-warning shadow-sm">
-            <Clock className="h-6 w-6" />
+            <Clock className="h-6 w-6 shrink-0" />
             <div>
               <h3 className="font-bold">Plantios atrasados</h3>
               <p className="text-sm opacity-90">
                 Existem {plantiosAtrasados.length} plantios atrasados.
               </p>
+
               <ul className="text-xs mt-1 ml-3 list-disc">
                 {plantiosAtrasados.map((p, i) => (
                   <li key={i}>
@@ -112,141 +189,181 @@ const DashboardGestor = () => {
                 ))}
               </ul>
             </div>
-          </div>
-        )}
 
-        {familiasPoucoAtivas.length > 0 && (
-          <div className="alert alert-info shadow-sm">
-            <Users className="h-6 w-6" />
-            <div>
-              <h3 className="font-bold">Famílias com baixa participação</h3>
-              <ul className="text-xs mt-1 ml-3 list-disc">
-                {familiasPoucoAtivas.map((f, i) => (
-                  <li key={i}>
-                    {f.nome} — {f.participacoes} participação(ões)
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <Link to="/plantios" className="btn btn-sm btn-warning">
+              Revisar
+            </Link>
           </div>
-        )}
-
-        {voluntariosPoucoAtivos.length > 0 && (
-          <div className="alert alert-error shadow-sm">
-            <AlertTriangle className="h-6 w-6" />
+        ) : (
+          <div className="alert alert-success shadow-sm">
+            <CheckCircle2 className="h-6 w-6 shrink-0" />
             <div>
-              <h3 className="font-bold">Voluntários pouco disponíveis</h3>
-              <ul className="text-xs mt-1 ml-3 list-disc">
-                {voluntariosPoucoAtivos.map((v, i) => (
-                  <li key={i}>
-                    {v.nome} — {v.diasDisponiveis} dia(s) disponíveis
-                  </li>
-                ))}
-              </ul>
+              <h3 className="font-bold">Status do Plantio</h3>
+              <p className="text-sm">
+                Nenhum plantio está atrasado. Ótimo trabalho!
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* ================= LISTAS ÚTEIS ================= */}
+      {/* Cards de informações */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
-        {/* Próximas colheitas */}
+        {/* Próximas Colheitas */}
         <div className="card bg-base-100 border border-base-300 shadow-sm">
           <div className="card-body">
-            <h2 className="card-title">
+            <h2 className="card-title text-lg">
               <CalendarDays className="h-5 w-5 mr-1" /> Próximas Colheitas
             </h2>
+
             <ul className="mt-3 space-y-2">
-              {proximasColheitas.map((c, i) => (
-                <li
-                  key={i}
-                  className="flex justify-between p-2 bg-base-200/60 rounded-md"
-                >
-                  <span>{c.nome}</span>
-                  <span className="text-sm text-base-content/70">{c.data}</span>
+              {proximasColheitas.length > 0 ? (
+                proximasColheitas.map((c, i) => (
+                  <li
+                    key={i}
+                    className="flex justify-between p-2 bg-base-200/60 rounded-md"
+                  >
+                    <span className="truncate">{c.nome}</span>
+                    <span className="text-sm text-base-content/70 font-medium">
+                      {c.data}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-base-content/60">
+                  Nenhuma colheita prevista.
                 </li>
-              ))}
+              )}
             </ul>
+
+            <div className="card-actions justify-end mt-4">
+              <Link to="/plantios" className="btn btn-sm btn-ghost">
+                Ver todos
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Próximos avisos */}
+        {/* Próximos Avisos */}
         <div className="card bg-base-100 border border-base-300 shadow-sm">
           <div className="card-body">
-            <h2 className="card-title">
+            <h2 className="card-title text-lg">
               <Megaphone className="h-5 w-5 mr-1" /> Próximos Avisos
             </h2>
-            <ul className="mt-3 space-y-2">
-              {proximosAvisos.map((a, i) => (
-                <li
-                  key={i}
-                  className="flex justify-between p-2 bg-base-200/60 rounded-md"
-                >
-                  <span>{a.titulo}</span>
-                  <span className="text-sm text-base-content/70">{a.data}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
 
-        {/* Últimas colheitas */}
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
-          <div className="card-body">
-            <h2 className="card-title">
-              <CheckCircle2 className="h-5 w-5 mr-1" /> Últimas Colheitas
-            </h2>
             <ul className="mt-3 space-y-2">
-              {colheitasRecentes.map((c, i) => (
+              {gestorStats.proximosAvisos.map((a, i) => (
                 <li
                   key={i}
                   className="flex justify-between p-2 bg-base-200/60 rounded-md"
                 >
-                  <span>{c.nome}</span>
-                  <span className="text-sm text-base-content/70">
-                    {c.quantidade} — {c.data}
+                  <span className="truncate">{a.titulo}</span>
+                  <span className="text-sm text-base-content/70 font-medium">
+                    {a.data}
                   </span>
                 </li>
               ))}
             </ul>
+
+            <div className="card-actions justify-end mt-4">
+              <Link to="/avisos" className="btn btn-sm btn-ghost">
+                Gerenciar Avisos
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Últimas Colheitas */}
+        <div className="card bg-base-100 border border-base-300 shadow-sm">
+          <div className="card-body">
+            <h2 className="card-title text-lg">
+              <CheckCircle2 className="h-5 w-5 mr-1" /> Últimas Colheitas
+            </h2>
+
+            <ul className="mt-3 space-y-2">
+              {ultimasColheitasLista.length > 0 ? (
+                ultimasColheitasLista.map((c, i) => (
+                  <li
+                    key={i}
+                    className="flex justify-between p-2 bg-base-200/60 rounded-md"
+                  >
+                    <span className="truncate">{c.nome}</span>
+                    <span className="text-sm text-base-content/70 font-medium">
+                      {c.quantidade} em {c.data}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-base-content/60">
+                  Nenhuma colheita recente.
+                </li>
+              )}
+            </ul>
+
+            <div className="card-actions justify-end mt-4">
+              <Link to="/colheitas" className="btn btn-sm btn-ghost">
+                Ver Registros
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ================= PAINEL ADMINISTRATIVO ================= */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm mb-8">
+      {/* Painel de Gestão Rápida */}
+      <div className="card bg-base-100 border border-base-300 shadow-sm mb-12">
         <div className="card-body">
-          <h2 className="card-title mb-4">Painel de Gestão Rápida</h2>
+          <h2 className="card-title">Painel de Gestão Rápida</h2>
+          <p className="text-sm text-base-content/70 mb-4">
+            Acesso rápido às principais ferramentas de gestão.
+          </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link
               to="/usuarios"
               className="btn btn-outline btn-primary justify-start gap-2"
             >
-              <UserPlus className="h-5 w-5" /> Gerenciar Usuários
+              <UserPlus className="h-5 w-5" />
+              Gerenciar Usuários
             </Link>
+
             <Link
               to="/hortas"
               className="btn btn-outline btn-primary justify-start gap-2"
             >
-              <Leaf className="h-5 w-5" /> Gerenciar Hortas
+              <Leaf className="h-5 w-5" />
+              Gerenciar Hortas
             </Link>
+
             <Link
               to="/avisos"
               className="btn btn-outline btn-primary justify-start gap-2"
             >
-              <Megaphone className="h-5 w-5" /> Criar Aviso
+              <Megaphone className="h-5 w-5" />
+              Criar Aviso
             </Link>
+
             <Link
               to="/colheitas"
               className="btn btn-outline btn-primary justify-start gap-2"
             >
-              <ClipboardList className="h-5 w-5" /> Registrar Colheita
+              <ClipboardList className="h-5 w-5" />
+              Registrar Colheita
             </Link>
+
             <Link
               to="/plantios"
               className="btn btn-outline btn-primary justify-start gap-2"
             >
-              <Sprout className="h-5 w-5" /> Gerenciar Plantios
+              <Sprout className="h-5 w-5" />
+              Gerenciar Plantios
+            </Link>
+
+            <Link
+              to="/familias"
+              className="btn btn-outline btn-primary justify-start gap-2"
+            >
+              <Users className="h-5 w-5" />
+              Gerenciar Famílias
             </Link>
           </div>
         </div>

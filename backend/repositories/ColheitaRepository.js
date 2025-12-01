@@ -1,40 +1,54 @@
-import prisma  from "../config/prisma.js";
+import prisma from "../config/prisma.js";
+
+const baseInclude = {
+  plantio: {
+    include: {
+      horta: true,
+    },
+  },
+};
 
 export const ColheitaRepository = {
-  findAll: async (options = {}) => {
+  findAll: async ({ where = {}, take, skip, orderBy } = {}) => {
     return await prisma.colheita.findMany({
-      where: options.where ?? {},
-      take: options.take,
-      skip: options.skip,
-      orderBy: options.orderBy,
-      include: options.include ?? { plantio: true },
+      where,
+      take,
+      skip,
+      orderBy,
+      include: baseInclude,
     });
   },
 
+  async findByPlantioId(plantioId) {
+    return await prisma.colheita.findUnique({
+      where: { plantioId },
+    });
+  },
   findById: async (id) => {
     return await prisma.colheita.findUnique({
       where: { id },
-      include: { plantio: true },
+      include: baseInclude,
     });
   },
 
-  findByPlantioId: async (plantioId) => {
-    return await prisma.colheita.findMany({ where: { plantioId } });
-  },
-
   create: async (data) => {
-    return await prisma.colheita.create({ data, include: { plantio: true } });
+    return await prisma.colheita.create({
+      data,
+      include: baseInclude,
+    });
   },
 
   update: async (id, data) => {
     return await prisma.colheita.update({
       where: { id },
       data,
-      include: { plantio: true },
+      include: baseInclude,
     });
   },
 
   delete: async (id) => {
-    return await prisma.colheita.delete({ where: { id } });
+    return await prisma.colheita.delete({
+      where: { id },
+    });
   },
 };
