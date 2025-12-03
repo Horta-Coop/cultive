@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useFamiliaStore } from "@/stores/useFamiliaStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { FormModal } from "@/components/ui/FormModal";
@@ -14,12 +14,24 @@ import {
   ClipboardList,
   UserCog,
   Plus,
+  Award,
 } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/Card";
+import ResponsiveGrid from "@/components/ui/ResponsiveGrid";
+import StatCard from "@/components/ui/StatCard";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 
 const FamiliaDetalhesPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { selectedFamilia, getFamiliaById, loading } = useFamiliaStore();
   const { fetchUsers, updateUser, user } = useUserStore();
 
@@ -29,29 +41,32 @@ const FamiliaDetalhesPage = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
 
   useEffect(() => {
     if (id) getFamiliaById(id);
   }, [id]);
 
-  if (loading) {
+  if (loading)
     return <LoadingOverlay loading={loading} message="Carregando família..." />;
-  }
-
-  if (!selectedFamilia) {
+  if (!selectedFamilia)
     return (
       <div className="text-center mt-20 text-base-content/70">
         Família não encontrada.
       </div>
     );
-  }
 
   const familia = selectedFamilia;
 
   const handleOpenAddMemberModal = async () => {
-    setLoadingUsers(true);
+    setModalLoading(true);
     try {
-      await fetchUsers();
+      if (!loadingUsers) {
+        setLoadingUsers(true);
+        await fetchUsers();
+        setLoadingUsers(false);
+      }
+
       const updatedUsers = useUserStore.getState().users;
       const available = updatedUsers.filter(
         (u) =>
@@ -59,27 +74,21 @@ const FamiliaDetalhesPage = () => {
           u.familiaId !== familia.id &&
           u.id !== user.id
       );
-
       setAvailableUsers(available);
-
       userForm.reset({ userIds: [] });
-
       addMemberModalRef.current?.open();
     } catch (err) {
       console.error(err);
       toast.error("Erro ao carregar usuários.");
     } finally {
-      setLoadingUsers(false);
+      setModalLoading(false);
     }
   };
 
   const handleAddMembers = async (data) => {
     const userIds = data.userIds.map((u) => u.value);
-    if (userIds.length === 0) {
-      toast.error("Selecione ao menos um usuário.");
-      return;
-    }
-
+    if (userIds.length === 0)
+      return toast.error("Selecione ao menos um usuário.");
     try {
       setSubmitting(true);
       await Promise.all(
@@ -97,72 +106,108 @@ const FamiliaDetalhesPage = () => {
     }
   };
 
+  // Cálculos de stats
+  const totalPlantios =
+    familia.hortas?.flatMap((h) => h.plantios || []).length || 0;
+
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 relative">
-      {/* Loading geral */}
-      <LoadingOverlay loading={loading} message="Carregando família..." />
-      <LoadingOverlay loading={loadingUsers} message="Carregando usuarios..." />
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <LoadingOverlay loading={loading} message="Carregando familia ..." />
 
-      {/* Voltar */}
-      <div>
-        <Link to="/familias" className="btn btn-ghost btn-sm gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Voltar
-        </Link>
-      </div>
-
+      <LoadingOverlay
+        loading={modalLoading}
+        message="Preparando formulário..."
+      />
       {/* Cabeçalho */}
-      <div className="mb-4">
-        <h1 className="text-4xl font-bold text-base-content mb-1">
-          {familia.nome}
-        </h1>
-        <p className="text-base-content/70">
-          {familia.descricao || "Sem descrição"}
-        </p>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold text-base-content">
+            {familia.nome}
+          </h1>
+          <p className="text-base-content/70 mt-2">
+            {familia.descricao || "Sem descrição disponível."}
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+        </Button>
       </div>
+
+      {/* Stats da Família */}
+      <ResponsiveGrid columns={2}>
+        <StatCard
+          title="Membros"
+          value={(familia.membros?.length || 0).toString()}
+          description="Total de membros na família"
+          icon={Users}
+        />
+        <StatCard
+          title="Hortas"
+          value={(familia.hortas?.length || 0).toString()}
+          description="Hortas associadas à família"
+          icon={Sprout}
+        />
+        <StatCard
+          title="Plantios ativos"
+          value={totalPlantios.toString()}
+          description="Plantios registrados nas hortas da família"
+          icon={ClipboardList}
+        />
+        <StatCard
+          title="Produção já colhida"
+          value={(
+            familia.hortas
+              ?.flatMap((h) => h.plantios || [])
+              .reduce(
+                (acc, p) => acc + (p.colheita?.quantidadeColhida || 0),
+                0
+              ) || 0
+          ).toString()}
+          description="Quantidade já colhida"
+          icon={Award}
+        />
+      </ResponsiveGrid>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Gestor */}
         {familia.gestor && (
-          <div className="card bg-primary/10 border border-primary shadow-md p-4 rounded-lg">
-            <div className="flex items-center gap-4 mb-3">
-              <UserCog className="h-6 w-6 text-primary" />
-              <h2 className="text-lg font-semibold text-primary">
-                Gestor Responsável
-              </h2>
-            </div>
-            <p>
-              <span className="font-semibold">{familia.gestor.nome}</span> —{" "}
-              <span className="text-base-content/60 capitalize">
-                {familia.gestor.role}
-              </span>
-            </p>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-primary" /> Gestor Responsável
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>
+                <span className="font-semibold">{familia.gestor.nome}</span> —{" "}
+                <span className="text-base-content/60 capitalize">
+                  {familia.gestor.role}
+                </span>
+              </p>
+            </CardContent>
+          </Card>
         )}
 
         {/* Membros */}
-        <div className="card bg-base-100 border border-base-200 shadow-md p-4 rounded-lg relative">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Users className="h-5 w-5 text-secondary" />
-              <h2 className="text-lg font-semibold text-secondary">
-                Membros ({familia.membros?.length || 0})
-              </h2>
-            </div>
-
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-secondary" /> Membros (
+              {familia.membros?.length || 0})
+            </CardTitle>
             {(user.role === "admin" || user.role === "gestor") && (
-              <button
-                className="btn btn-sm btn-success gap-1"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleOpenAddMemberModal}
               >
-                <Plus className="h-4 w-4" /> Adicionar
-              </button>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar
+              </Button>
             )}
-          </div>
-
-          <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
+          </CardHeader>
+          <CardContent className="max-h-64 overflow-y-auto space-y-2 text-sm">
             {familia.membros?.map((m) => (
-              <li
+              <div
                 key={m.id}
                 className="flex justify-between border-b border-base-200 pb-1"
               >
@@ -170,40 +215,41 @@ const FamiliaDetalhesPage = () => {
                 <span className="text-base-content/60 capitalize">
                   {m.role}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Hortas */}
-        <div className="md:col-span-2 card bg-base-100 border border-base-200 shadow-md p-4 rounded-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <Sprout className="h-5 w-5 text-success" />
-            <h2 className="text-lg font-semibold text-success">
-              Hortas Associadas
-            </h2>
-          </div>
-          <ul className="space-y-2 text-sm max-h-64 overflow-y-auto">
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sprout className="h-5 w-5 text-success" /> Hortas Associadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="max-h-64 overflow-y-auto space-y-2 text-sm">
             {familia.hortas?.map((h) => (
-              <li key={h.id} className="border-b pb-1">
+              <div key={h.id}>
                 <strong>{h.nome}</strong> — {h.tipoHorta || "N/A"}
-              </li>
-            ))}
-          </ul>
-        </div>
+              </div>
+            )) || (
+              <p className="italic text-base-content/60">
+                Nenhuma horta registrada.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Plantios */}
-        <div className="md:col-span-2 card bg-base-100 border border-base-200 shadow-md p-4 rounded-lg">
-          <div className="flex items-center gap-3 mb-3">
-            <ClipboardList className="h-5 w-5 text-warning" />
-            <h2 className="text-lg font-semibold text-warning">
-              Plantios Ativos
-            </h2>
-          </div>
-
-          {familia.hortas?.flatMap((h) => h.plantios || []).length > 0 ? (
-            <div className="grid md:grid-cols-2 gap-3">
-              {familia.hortas
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5 text-warning" /> Plantios
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid md:grid-cols-2 gap-3">
+            {familia.hortas?.flatMap((h) => h.plantios || []).length > 0 ? (
+              familia.hortas
                 .flatMap((h) => h.plantios || [])
                 .map((p) => (
                   <div key={p.id} className="border rounded-md p-2 shadow-sm">
@@ -213,14 +259,14 @@ const FamiliaDetalhesPage = () => {
                       {p.unidadeMedida || ""}
                     </p>
                   </div>
-                ))}
-            </div>
-          ) : (
-            <p className="text-base-content/60 text-sm">
-              Nenhum plantio registrado.
-            </p>
-          )}
-        </div>
+                ))
+            ) : (
+              <p className="text-base-content/60 text-sm">
+                Nenhum plantio registrado.
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Modal Adicionar Membros */}

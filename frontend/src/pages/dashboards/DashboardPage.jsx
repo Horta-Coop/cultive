@@ -17,13 +17,14 @@ import DashboardVoluntario from "@/pages/dashboards/DashboardVoluntario";
 import LoadingOverlay from "../../components/ui/LoadingOverlay";
 
 const DashboardPage = () => {
-  const user = useUserStore((state) => state.user);
+  const { user } = useUserStore();
 
   if (!user)
     return (
       <LoadingOverlay loading={true} message="Carregando dados do usuário..." />
     );
 
+  console.log(user.role?.toUpperCase());
   const renderDashboard = () => {
     const role = user?.role?.toUpperCase() ?? "";
 
@@ -72,7 +73,7 @@ const DashboardPage = () => {
             <p className="text-sm text-base-content/70">
               {user?.familia
                 ? `Família: ${user.familia}`
-                : user?.role.toUpperCase() === "CULTIVADOR"
+                : user?.role?.toUpperCase() === "CULTIVADOR"
                 ? "Sem família vinculada"
                 : ""}
             </p>

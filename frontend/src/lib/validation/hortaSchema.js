@@ -35,8 +35,8 @@ const hortaSchema = z.object({
 
   coordenada: z.string().optional().or(z.literal("")),
 
-  gestorId: z.string().min(1, "Selecione um gestor"),
-  familiaId: z.string().min(1, "Selecione uma família"),
+  gestorId: z.string().uuid(1, "Selecione um gestor"),
+  familiaId: z.string().uuid(1, "Selecione uma família"),
 
   descricao: z.string().optional(),
   observacoes: z.string().optional(),

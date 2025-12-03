@@ -183,10 +183,6 @@ const PlantiosPage = () => {
     });
   }, [hortas, plantios, searchQuery]);
 
-  /* const uniquePlantioStatus = useMemo(
-    () => [...new Set(plantios.map((p) => p.status).filter(Boolean))],
-    [plantios]
-  ); */
 
   const canEditOrDelete = user.role === "admin" || user.role === "gestor";
 
@@ -220,19 +216,19 @@ const PlantiosPage = () => {
           title="Plantios Totais"
           value={plantios.length.toString()}
           description="Plantios cadastrados"
-          icon={<LayoutGrid className="h-6 w-6" />}
+          icon={LayoutGrid}
         />
         <StatCard
           title="Culturas Diferentes"
           value={new Set(plantios.map((p) => p.cultura)).size.toString()}
           description="Tipos de culturas"
-          icon={<Sprout className="h-6 w-6" />}
+          icon={Sprout}
         />
         {/* <StatCard
           title="Plantios Ativos"
           value={plantios.filter((p) => p.status === "ativo").length.toString()}
           description="Em andamento"
-          icon={<Tractor className="h-6 w-6" />}
+          icon={Tractor }
         /> */}
         {/* <StatCard
           title="Plantios Inativos"
@@ -240,7 +236,7 @@ const PlantiosPage = () => {
             .filter((p) => p.status === "inativo")
             .length.toString()}
           description="Finalizados ou pausados"
-          icon={<Tractor className="h-6 w-6" />}
+          icon={Tractor }
         /> */}
       </ResponsiveGrid>
 

@@ -140,13 +140,46 @@ export const useUserStore = create(
       fetchUsers: async (params = {}) => {
         set({ loading: true, users: [] });
         try {
-          const res = await axios.get("/user/", { params });
+          const res = await axios.get("/user", { params });
           set({ users: res.data.usuarios, loading: false });
         } catch (error) {
           set({ loading: false });
           toast.error(
             error?.response?.data?.message || "Erro ao buscar usuários"
           );
+        }
+      },
+
+      getDashboardData: async () => {
+        set({ loading: true });
+
+        try {
+          const res = await axios.get("/user/dashboard/data");
+          const data = res.data.data;
+
+          const isAdmin = data?.totais !== undefined;
+
+          if (isAdmin) {
+            set({
+              dashboardData: data,
+              loading: false,
+              isAdmin,
+            });
+          } else {
+            set({
+              user: data,
+              loading: false,
+              isAdmin,
+            });
+          }
+        } catch (error) {
+          set({ loading: false });
+
+          toast.error(
+            error?.response?.data?.message || "Erro ao carregar dados completos"
+          );
+
+          return null;
         }
       },
 
@@ -176,11 +209,8 @@ export const useUserStore = create(
             role: data.role || "cultivador",
             pictureUrl: data.pictureUrl || null,
           };
-          const res = await axios.post("/user/", payload);
+          const res = await axios.post("/user", payload);
           const novoUsuario = res.data.user;
-
-          console.log("Novo usuário recebido:", novoUsuario);
-
           set({
             users: [...get().users, novoUsuario],
             loading: false,

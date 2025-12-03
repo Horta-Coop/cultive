@@ -13,16 +13,16 @@ model Usuario {
   email            String            @unique
   senhaHash        String
   telefone         String?
-  updatedAt        DateTime          @updatedAt
+  nome             String?
+  username         String            @unique
+  role             Role?             @default(cultivador)
   onBoarding       Boolean           @default(false)
   endereco         String?
-  familiaId        String?
-  nome             String?
   pictureUrl       String?
-  resetToken        String?   // token temporário para reset
-  resetTokenExpiry  DateTime? // expiração do token
-  role             Role?             @default(cultivador)
-  username         String            @unique
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   Disponibilidade  Disponibilidade?
   familiasGestor   Familia[]         @relation("GestorFamilia")
   hortasGestor     Horta[]           @relation("GestorHortas")
@@ -33,6 +33,7 @@ model Usuario {
   PerfilGestor     PerfilGestor?
   PerfilVoluntario PerfilVoluntario?
   familiasMembro   Familia?          @relation("UsuarioFamilia", fields: [familiaId], references: [id])
+  familiaId        String?
 }
 
 model PerfilGestor {
@@ -43,6 +44,8 @@ model PerfilGestor {
   organizacaoVinculada String
   observacoes          String?
   usuario              Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+    createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model Disponibilidade {
@@ -54,6 +57,8 @@ model Disponibilidade {
   perfilVoluntarioId String?
   PerfilVoluntario   PerfilVoluntario? @relation(fields: [perfilVoluntarioId], references: [id])
   usuario            Usuario           @relation(fields: [usuarioId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model PerfilVoluntario {
@@ -64,6 +69,8 @@ model PerfilVoluntario {
   observacoes     String?
   disponibilidade Disponibilidade[]
   usuario         Usuario           @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model PerfilCultivador {
@@ -74,6 +81,8 @@ model PerfilCultivador {
   plantasFavoritas String?
   observacoes      String?
   usuario          Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+    createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model PerfilAdmin {
@@ -83,64 +92,74 @@ model PerfilAdmin {
   observacoes String?
   usuarioId   String  @unique
   usuario     Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+    createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Familia {
+  id         String    @id @default(uuid())
+  nome       String
   representante String
-  qtdMembros    Int
-  descricao     String?
-  gestorId      String
-  id            String    @id @default(uuid())
-  nome          String
-  avisos        Aviso[]
-  gestor        Usuario   @relation("GestorFamilia", fields: [gestorId], references: [id])
-  hortas        Horta[]   @relation("HortasFamilia")
-  membros       Usuario[] @relation("UsuarioFamilia")
+  qtdMembros Int
+  descricao  String?
+  gestorId   String
+  avisos     Aviso[]
+  gestor     Usuario   @relation("GestorFamilia", fields: [gestorId], references: [id])
+  hortas     Horta[]   @relation("HortasFamilia")
+  membros    Usuario[] @relation("UsuarioFamilia")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Horta {
+  id            String    @id @default(uuid())
+  nome          String
   areaCultivada Decimal
   tipoSolo      String
   tipoHorta     EHorta
   observacoes   String?
   familiaId     String?
-  coordenada     String?
+  coordenada    String?
   descricao     String?
   endereco      String
   gestorId      String?
-  id            String    @id @default(uuid())
-  nome          String
   familia       Familia?  @relation("HortasFamilia", fields: [familiaId], references: [id])
   gestor        Usuario?  @relation("GestorHortas", fields: [gestorId], references: [id])
   plantios      Plantio[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Plantio {
-  tipoPlantacao      String
-  previsaoColheita   DateTime
+  id               String    @id @default(uuid())
+  tipoPlantacao    String
+  previsaoColheita DateTime
   quantidadePlantada Decimal
-  unidadeMedida      String
-  observacoes        String?
-  hortaId            String
-  colheitaId         String?   @unique
-  cultura            String
-  dataColheita       DateTime?
-  dataInicio         DateTime
-  id                 String    @id @default(uuid())
-  colheita           Colheita?
-  horta              Horta     @relation(fields: [hortaId], references: [id], onDelete: Cascade)
+  unidadeMedida    String
+  observacoes      String?
+  hortaId          String
+  colheitaId       String?   @unique
+  cultura          String
+  dataColheita     DateTime?
+  dataInicio       DateTime
+  colheita         Colheita?
+  horta            Horta     @relation(fields: [hortaId], references: [id], onDelete: Cascade)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model Colheita {
-  dataColheita      DateTime @default(now())
+  id              String   @id @default(uuid())
+  dataColheita    DateTime @default(now())
   quantidadeColhida Decimal
-  unidadeMedida     String
-  destinoColheita   String
-  plantioId         String   @unique
-  observacoes       String?
-  cultura           String
-  id                String   @id @default(uuid())
-  plantio           Plantio  @relation(fields: [plantioId], references: [id], onDelete: Cascade)
+  unidadeMedida   String
+  destinoColheita String
+  plantioId       String   @unique
+  observacoes     String?
+  cultura         String
+  plantio         Plantio  @relation(fields: [plantioId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model Aviso {
@@ -149,8 +168,9 @@ model Aviso {
   descricao  String
   dataEvento DateTime
   familiaId  String
-  updatedAt  DateTime @updatedAt
   familia    Familia  @relation(fields: [familiaId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Notificacao {
@@ -159,8 +179,9 @@ model Notificacao {
   titulo    String
   mensagem  String
   lida      Boolean  @default(false)
-  createdAt DateTime @default(now())
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Log {
@@ -170,6 +191,8 @@ model Log {
   contexto  String?
   data      DateTime @default(now())
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Faq {

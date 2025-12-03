@@ -155,12 +155,11 @@ const Usuarios = () => {
         await createUser(data);
       }
 
-      await fetchUsers();
       modalRef.current?.close();
       setEditingUser(null);
     } catch (err) {
       console.error("Erro ao salvar usuário:", err);
-      console.error("Erro ao salvar usuário:", err);
+      toast.error("Erro ao salvar usuário");
     } finally {
       setSaving(false);
     }
@@ -215,13 +214,13 @@ const Usuarios = () => {
               title="Total de Usuários"
               value={users.length.toString()}
               description="Usuários cadastrados"
-              icon={<Users className="h-6 w-6" />}
+              icon={Users}
             />
             <StatCard
               title="Gestores"
               value={users.filter((u) => u.role === "gestor").length.toString()}
               description="Usuários com função de gestor"
-              icon={<Shield className="h-6 w-6" />}
+              icon={Shield}
             />
             <StatCard
               title="Cultivadores"
@@ -229,7 +228,7 @@ const Usuarios = () => {
                 .filter((u) => u.role === "cultivador")
                 .length.toString()}
               description="Usuários comuns"
-              icon={<Users className="h-6 w-6" />}
+              icon={Users}
             />
           </ResponsiveGrid>
 

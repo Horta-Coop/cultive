@@ -99,17 +99,20 @@ export const createUserByAdmin = async (req, res) => {
     const tempPassword = UserService.generateTempPassword();
 
     // Cria usuário
-    const user  = await UserService.createUserAdmin({
-      nome,
-      username,
-      email,
-      senha: tempPassword,
-      role,
-      familiaId,
-    }, req.user);
+    const user = await UserService.createUserAdmin(
+      {
+        nome,
+        username,
+        email,
+        senha: tempPassword,
+        role,
+        familiaId,
+      },
+      req.user
+    );
 
     // Cria token de reset
-    const resetToken = await UserService.createResetToken(user.id);
+    const resetToken = await UserService.createResetToken(user.id, req.user);
     const resetLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     // Envia email de redefinição
@@ -126,12 +129,37 @@ export const createUserByAdmin = async (req, res) => {
   }
 };
 
+// Deletar um usuário (somente admin)
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Acesso negado" });
+    }
+
+    const deletedUser = await UserService.deleteUser(id, req.user);
+
+    return res.json({
+      message: "Usuário deletado com sucesso",
+      user: deletedUser,
+    });
+  } catch (error) {
+    console.error("Erro ao deletar usuário:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 export const completeUserOnboarding = async (req, res) => {
   try {
     const userId = req.user.id; // vem do token JWT
     const body = req.body;
 
-    const updatedUser = await UserService.completeOnboarding(userId, body, req.user);
+    const updatedUser = await UserService.completeOnboarding(
+      userId,
+      body,
+      req.user
+    );
 
     return res.json({
       message: "Perfil completado com sucesso!",
@@ -140,5 +168,18 @@ export const completeUserOnboarding = async (req, res) => {
   } catch (error) {
     console.error("Erro no onboarding:", error);
     return res.status(400).json({ message: error.message });
+  }
+};
+
+export const getDashboardData = async (req, res) => {
+  try {
+    const user = req.user;
+
+    const data = await UserService.getDashboardData(user);
+
+    return res.json({ message: "Dashboard carregado", data });
+  } catch (error) {
+    console.error("Erro ao buscar dados do dashboard:", error);
+    return res.status(500).json({ message: error.message });
   }
 };

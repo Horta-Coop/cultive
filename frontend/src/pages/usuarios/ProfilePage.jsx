@@ -5,7 +5,6 @@ import { useUserStore } from "@/stores/useUserStore";
 export default function MeuPerfil() {
   const { user } = useUserStore();
 
-  console.log("Dados do usuário no Perfil:", user);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalPerfilEspecificoOpen, setModalPerfilEspecificoOpen] =
     useState(false);

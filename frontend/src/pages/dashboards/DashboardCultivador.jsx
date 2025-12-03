@@ -23,7 +23,7 @@ const DashboardCultivador = () => {
   useEffect(() => {
     if (user?.familiaId) getFamiliaById(user.familiaId);
     if (hortas.length === 0) fetchHortas();
-  }, [user, getFamiliaById, fetchHortas]);
+  }, [user, getFamiliaById, fetchHortas, hortas.length]);
 
   if (!user) {
     return (
@@ -74,19 +74,19 @@ const DashboardCultivador = () => {
           title="Plantios Ativos"
           value={familia?.plantiosAtivos || 0}
           description="Em andamento pela sua família"
-          icon={<Sprout />}
+          icon={Sprout}
         />
         <StatCard
           title="Próxima Colheita"
           value={familia?.proximaColheita || "Sem previsão"}
           description="Data prevista"
-          icon={<CalendarDays />}
+          icon={CalendarDays}
         />
         <StatCard
           title="Membros na Família"
           value={familia?.membros?.length || 0}
           description="Participando ativamente"
-          icon={<Users />}
+          icon={Users}
         />
       </div>
 

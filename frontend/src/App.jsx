@@ -5,7 +5,6 @@ function App() {
   return (
     <div
       className="flex flex-col min-h-screen w-full bg-base-200 text-base-content overflow-x-hidden"
-      data-theme="natal-encantado"
     >
       <main className="w-full h-full flex justify-center items-start sm:items-center">
         <div className="w-full h-full">

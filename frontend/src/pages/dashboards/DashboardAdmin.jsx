@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -6,49 +8,41 @@ import {
   Leaf,
   Sprout,
   BarChart3,
-  Wrench,
   Activity,
   Database,
   FileText,
   Megaphone,
-  Bell,
-  UserCircle,
-  CalendarDays,
-  Info,
 } from "lucide-react";
+import { useUserStore } from "@/stores/useUserStore";
 import StatCard from "../../components/ui/StatCard";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
 
 const DashboardAdmin = () => {
+  const { user, dashboardData, getDashboardData, loading } = useUserStore();
 
-  const rankingHortas = [
-    { nome: "Horta Central", produtividade: 92 },
-    { nome: "Horta Esperança", produtividade: 86 },
-    { nome: "Horta Primavera", produtividade: 81 },
-  ];
+  useEffect(() => {
+    getDashboardData();
+  }, []);
 
-  const logsSistema = [
-    {
-      id: 1,
-      user: "Maria Souza (Gestor)",
-      action: "Cadastrou nova horta: Horta da Vila",
-      timeAgo: "Há 2h",
-    },
-    {
-      id: 2,
-      user: "Sistema",
-      action: "Relatório mensal de produtividade gerado",
-      timeAgo: "Ontem às 16:30",
-    },
-    {
-      id: 3,
-      user: "João Silva (Família)",
-      action: "Registrou colheita de 4kg de alface",
-      timeAgo: "Há 3 dias",
-    },
-  ];
+  if (!user) {
+    return <LoadingOverlay loading={true} message="Carregando dados..." />;
+  }
+
+  const adminStats = {
+    usuarios: dashboardData?.totais?.usuarios || 0,
+    hortas: dashboardData?.totais?.hortas || 0,
+    familias: dashboardData?.totais?.familias || 0,
+    plantios: dashboardData?.totais?.plantios || 0,
+    colheitas: dashboardData?.totais?.colheitas || 0,
+    logs: dashboardData?.totais?.logs || 0,
+  };
+
+  const logsSistema = dashboardData?.ultimosLogs || [];
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="">
+      <LoadingOverlay loading={loading} message="Carregando dados..." />
+
       {/* Sugestão do Sistema */}
       <div className="alert alert-info shadow-sm mb-8">
         <BarChart3 className="h-6 w-6" />
@@ -65,73 +59,46 @@ const DashboardAdmin = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard
           title="Usuários Ativos"
-          value={125}
+          value={adminStats.usuarios}
           description="Total de usuários na plataforma"
-          icon={<Users />}
+          icon={Users}
         />
         <StatCard
           title="Hortas Cadastradas"
-          value={15}
+          value={adminStats.hortas}
           description="Hortas registradas até o momento"
-          icon={<Leaf />}
+          icon={Leaf}
         />
         <StatCard
           title="Famílias Ativas"
-          value={42}
+          value={adminStats.familias}
           description="Participando de hortas comunitárias"
-          icon={<Sprout />}
+          icon={Sprout}
         />
         <StatCard
           title="Plantios Ativos"
-          value={67}
+          value={adminStats.plantios}
           description="Distribuídos entre as hortas"
-          icon={<ChartColumn />}
+          icon={ChartColumn}
         />
         <StatCard
           title="Colheitas do Mês"
-          value={128}
+          value={adminStats.colheitas}
           description="Total de registros recentes"
-          icon={<BarChart3 />}
+          icon={BarChart3}
         />
         <StatCard
           title="Logs Registrados"
-          value={340}
+          value={adminStats.logs}
           description="Eventos registrados no sistema"
-          icon={<Database />}
+          icon={Database}
         />
-      </div>
-
-      {/* Ranking de Hortas */}
-      <div className="card bg-base-100 border border-base-300 shadow-sm mb-8">
-        <div className="card-body">
-          <h2 className="card-title">Ranking de Hortas Mais Produtivas</h2>
-          <div className="mt-4 space-y-3">
-            {rankingHortas.map((horta, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 rounded-lg bg-base-200/60 hover:bg-base-200 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-primary">{index + 1}º</span>
-                  <span className="font-medium">{horta.nome}</span>
-                </div>
-                <div className="text-sm text-base-content/70">
-                  Produtividade:{" "}
-                  <span className="text-primary font-semibold">
-                    {horta.produtividade}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Ferramentas Administrativas */}
       <div className="card bg-base-100 border border-base-300 shadow-sm mb-8">
         <div className="card-body">
           <h2 className="card-title mb-4">Ferramentas Administrativas</h2>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link
               to="/usuarios"
@@ -184,23 +151,47 @@ const DashboardAdmin = () => {
           </div>
 
           <div className="space-y-4">
-            {logsSistema.map((log) => (
-              <div
-                key={log.id}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-base-200 transition-colors"
-              >
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Activity className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{log.user}</p>
-                  <p className="text-sm text-base-content/70">{log.action}</p>
-                  <p className="text-xs text-base-content/50 mt-1">
-                    {log.timeAgo}
-                  </p>
-                </div>
+            {logsSistema.length > 0 ? (
+              logsSistema.map((log) => {
+                const usuario = dashboardData.ultimosUsuarios.find(
+                  (u) => u.id === log.usuarioId
+                );
+
+                return (
+                  <div
+                    key={log.id}
+                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-base-200 transition-colors"
+                  >
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Activity className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        {usuario?.nome || log.usuarioId}
+                      </p>
+                      <p className="text-sm text-base-content/70">{log.acao}</p>
+                      <p className="text-xs text-base-content/50 mt-1">
+                        {log.createdAt
+                          ? new Date(log.createdAt).toLocaleString()
+                          : "Sem data"}
+                      </p>
+                      {log.contexto && (
+                        <p className="text-xs text-base-content/50 mt-1">
+                          Contexto:{" "}
+                          {typeof log.contexto === "string"
+                            ? log.contexto
+                            : JSON.stringify(log.contexto)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center text-base-content/60 py-4">
+                Nenhum log registrado no sistema.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>

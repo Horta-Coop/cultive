@@ -96,10 +96,10 @@ export const FamiliaService = {
       throw new Error("Acesso negado");
     }
 
-    const { usuarioId } = membroData;
-    if (!usuarioId) throw new Error("usuarioId é obrigatório");
+    const { userId } = membroData;
+    if (!userId) throw new Error("userId é obrigatório");
 
-    return await FamiliaRepository.addMembro(familiaId, usuarioId);
+    return await FamiliaRepository.addMembro(familiaId, userId);
   },
 
   removeMembro: async ({ membroId, requester }) => {

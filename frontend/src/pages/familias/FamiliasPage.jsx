@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { familiaSchema } from "@/lib/validation/familiaSchema";
 import { useFamiliaStore } from "@/stores/useFamiliaStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { FormModal } from "@/components/ui/FormModal";
@@ -31,6 +30,10 @@ import {
 
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import {
+  familiaSchemaAdmin,
+  familiaSchemaGestor,
+} from "@/lib/validation/familiaSchema";
 
 const Familias = () => {
   const navigate = useNavigate();
@@ -60,10 +63,13 @@ const Familias = () => {
 
   const { user, users, fetchUsers } = useUserStore();
 
+  const schema =
+    user?.role === "admin" ? familiaSchemaAdmin : familiaSchemaGestor;
+
   const userForm = useForm({ defaultValues: { userIds: [] } });
 
   const form = useForm({
-    resolver: zodResolver(familiaSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       nome: "",
       representante: "",
@@ -114,7 +120,7 @@ const Familias = () => {
     try {
       setEditingFamilia(familia);
 
-      if (!users || users.length === 0) {
+      if (!loadingUsers || users.length === 0) {
         setLoadingUsers(true);
         await fetchUsers();
         setLoadingUsers(false);
@@ -145,7 +151,6 @@ const Familias = () => {
         ...data,
         gestorId: user.role === "gestor" ? user.id : data.gestorId,
       };
-
       if (editingFamilia) await updateFamilia(editingFamilia.id, payload);
       else await createFamilia(payload);
 
@@ -166,9 +171,9 @@ const Familias = () => {
 
     try {
       await fetchUsers();
-      const updatedUsers = useUserStore.getState().users;
+      const allUsers = useUserStore.getState().users;
 
-      const available = updatedUsers.filter(
+      const available = allUsers.filter(
         (u) =>
           !["admin"].includes(u.role) &&
           u.familiaId !== familia.id &&
@@ -213,6 +218,7 @@ const Familias = () => {
       setLoadingUsers(false);
     }
   };
+
   const handleDeleteFamilia = async (id) => {
     const confirm = window.confirm(
       "Tem certeza que deseja excluir esta família? Esta ação não pode ser desfeita."
@@ -289,20 +295,20 @@ const Familias = () => {
             title="Total"
             value={totalFamilias.toString()}
             description="Famílias cadastradas"
-            icon={<Users className="h-6 w-6" />}
+            icon={Users}
           />
           <StatCard
             title="Média de Membros"
             value={mediaMembros.toString()}
             description="Por família"
-            icon={<UserCheck className="h-6 w-6" />}
+            icon={UserCheck}
           />
           {user.role === "admin" && (
             <StatCard
               title="Gestores Ativos"
               value={gestoresComFamilias.toString()}
               description="Com famílias vinculadas"
-              icon={<Award className="h-6 w-6" />}
+              icon={Award}
             />
           )}
         </ResponsiveGrid>
@@ -584,7 +590,7 @@ const Familias = () => {
       <FormModal
         ref={userModalRef}
         title={`Adicionar Membros à ${editingFamilia?.nome || ""}`}
-        onSubmit={handleAddExistingUsers}
+        onSubmit={userForm.handleSubmit(handleAddExistingUsers)}
         submitLabel="Adicionar"
       >
         {loadingUsers ? (

@@ -29,8 +29,6 @@ export const createHorta = async (req, res) => {
     const requester = req.user;
     const data = req.body;
 
-    console.log(data)
-
     const created = await HortaService.createHorta({ data, requester });
     return res.status(201).json({ horta: created });
   } catch (error) {

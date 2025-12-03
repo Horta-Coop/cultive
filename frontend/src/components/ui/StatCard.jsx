@@ -1,5 +1,5 @@
 // StatCard.jsx
-const StatCard = ({ title, value, description, icon, smallValue = false }) => {
+const StatCard = ({ title, value, description, icon: Icon, smallValue = false }) => {
   return (
     <div className="card w-full shadow-md bg-base transition-shadow duration-300 hover:shadow-lg rounded-xl cursor-pointer hover:scale-[1.01]">
       <div className="card-body p-6">
@@ -21,7 +21,7 @@ const StatCard = ({ title, value, description, icon, smallValue = false }) => {
 
           <div className="flex-shrink-0 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             <div className="flex items-center justify-center h-6 w-6">
-              {icon}
+              <Icon className="h-6 w-6"/>
             </div>
           </div>
         </div>

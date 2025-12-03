@@ -55,9 +55,9 @@ export const FamiliaRepository = {
     return await prisma.familia.delete({ where: { id } });
   },
 
-  addMembro: async (familiaId, { usuarioId }) => {
+  addMembro: async (familiaId, userId) => {
     return await prisma.usuario.update({
-      where: { id: usuarioId },
+      where: { id: userId },
       data: { familiaId },
       select: { id: true, nome: true, email: true, role: true },
     });

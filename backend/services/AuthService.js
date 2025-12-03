@@ -16,9 +16,9 @@ const DUMMY_HASH = bcrypt.hashSync("invalid-password", BCRYPT_ROUNDS);
 
 export const AuthService = {
   signup: async ({ nome, username, email, senha }) => {
-    const userExist = await UserRepository.findByEmail(email);
+    const userExist = await UserRepository.findByUsernameOrEmail({email, username});
     if (userExist) {
-      throw new Error("Email invalido.");
+      throw new Error("Credenciais invalidas.");
     }
     const senhaHash = await bcrypt.hash(senha + PEPPER, BCRYPT_ROUNDS);
     const user = await UserRepository.createUser({

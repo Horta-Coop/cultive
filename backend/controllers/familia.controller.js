@@ -52,6 +52,8 @@ export const createFamilia = async (req, res) => {
 
     const data = req.body;
 
+    if (!data) return res.status(400).json({ message: "Dados inválidos" });
+
     const created = await FamiliaService.createFamilia({ data, requester });
 
     return res.status(201).json({ familia: created });
@@ -121,14 +123,13 @@ export const addMembro = async (req, res) => {
       return res.status(401).json({ message: "Usuário não autenticado" });
 
     const { familiaId } = req.params;
-    const { usuarioId } = req.body; // agora o body deve conter apenas { usuarioId }
-
-    if (!usuarioId)
-      return res.status(400).json({ message: "usuarioId é obrigatório" });
+    const { userId } = req.body;
+    if (!userId)
+      return res.status(400).json({ message: "userId é obrigatório" });
 
     const novoMembro = await FamiliaService.addMembro({
       familiaId,
-      membroData: { usuarioId },
+      membroData: { userId },
       requester,
     });
 

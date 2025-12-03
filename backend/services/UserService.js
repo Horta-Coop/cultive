@@ -47,21 +47,35 @@ export const UserService = {
         skip,
         orderBy: Object.keys(order).length ? order : undefined,
       });
-    } else if (requester.role === "gestor") {
-      // Gestor só vê usuários das famílias que ele gerencia
-      usuarios = await UserRepository.findAllUsersByGestor(requester.id);
 
-      // Aplicar filtro de busca, se houver
+      usuarios = usuarios.filter((u) => u.id !== requester.id);
+    } else if (requester.role === "gestor") {
+      const familias = await FamiliaRepository.findByGestorId(requester.id);
+
+      const usuariosSemFamilia =
+        await UserRepository.findAllUsersWithoutFamily();
+
+      let usuariosDasFamilias = [];
+      if (familias.length > 0) {
+        usuariosDasFamilias = await UserRepository.findAllUsersByGestor(
+          requester.id
+        );
+      }
+      usuarios = [...usuariosSemFamilia, ...usuariosDasFamilias].filter(
+        (u, index, self) =>
+          u.id !== requester.id &&
+          self.findIndex((user) => user.id === u.id) === index
+      );
+
       if (search) {
         const searchLower = search.toLowerCase();
         usuarios = usuarios.filter(
           (u) =>
-            u.name.toLowerCase().includes(searchLower) ||
-            u.email.toLowerCase().includes(searchLower)
+            u.nome?.toLowerCase().includes(searchLower) ||
+            u.email?.toLowerCase().includes(searchLower)
         );
       }
 
-      // Paginação manual para arrays
       if (page && limit) {
         const start = (parseInt(page, 10) - 1) * parseInt(limit, 10);
         const end = start + parseInt(limit, 10);
@@ -83,7 +97,6 @@ export const UserService = {
       return safeData;
     });
 
-    // Log da consulta de usuários
     await LogRepository.create({
       usuarioId: requester.id,
       acao: "Consultou lista de usuários",
@@ -91,6 +104,37 @@ export const UserService = {
     });
 
     return safeUsuarios;
+  },
+
+  deleteUser: async (userId, requester) => {
+    if (requester.role !== "admin") {
+      throw new Error("Acesso negado");
+    }
+
+    // Verifica se o usuário existe
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new Error("Usuário não encontrado");
+    }
+
+    // Deleta o usuário
+    const deletedUser = await UserRepository.deleteUser(userId);
+
+    // Cria log detalhado da ação
+    await LogRepository.create({
+      usuarioId: requester.id,
+      acao: "Deletou usuário",
+      contexto: JSON.stringify({
+        usuarioDeletado: {
+          id: deletedUser.id,
+          nome: deletedUser.nome,
+          email: deletedUser.email,
+          role: deletedUser.role,
+        },
+      }),
+    });
+
+    return deletedUser;
   },
 
   getUser: async (params = {}) => {
@@ -208,7 +252,7 @@ export const UserService = {
     return user;
   },
 
-  createResetToken: async (userId) => {
+  createResetToken: async (userId, requester) => {
     const token = crypto.randomBytes(32).toString("hex");
     const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
     await UserRepository.updateUser(userId, {
@@ -284,5 +328,15 @@ export const UserService = {
     // Retorna usuário atualizado
     const updated = await UserRepository.findById(userId);
     return updated;
+  },
+
+  getDashboardData: async (user) => {
+    if (!user) throw new Error("Usuário não informado");
+
+    if (user.role === "admin") {
+      return await UserRepository.getAdminDashboard();
+    }
+
+    return await UserRepository.getUserFullData(user.id);
   },
 };

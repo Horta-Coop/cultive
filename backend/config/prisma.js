@@ -1,11 +1,37 @@
 import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
 
-const prismaClientSingleton = () => {
-  const prisma = new PrismaClient({
+dotenv.config();
+
+const createClient = (url) =>
+  new PrismaClient({
     log: ["error"],
+    datasources: { db: { url } },
   });
 
-  // Listener para reconectar se a conexão cair
+async function connectWithFallback() {
+  let url = process.env.DATABASE_URL;
+  let prisma = createClient(url);
+
+  try {
+    await prisma.$connect();
+    console.log("[Neon] conectado!");
+    return prisma;
+  } catch (err) {
+
+    const fallbackURL = process.env.DATABASE_FALLBACK_URL;
+
+    prisma = createClient(fallbackURL);
+    await prisma.$connect();
+
+    console.log("[Postgres Local] conectado!");
+    return prisma;
+  }
+}
+
+const prismaClientSingleton = async () => {
+  const prisma = await connectWithFallback();
+
   prisma.$on("error", async (e) => {
     console.error("[PRISMA] Erro detectado:", e);
 
@@ -26,7 +52,6 @@ const prismaClientSingleton = () => {
     }
   });
 
-  // Extensão que remove senhaHash de forma segura
   return prisma.$extends({
     query: {
       $allModels: {
@@ -57,10 +82,14 @@ const prismaClientSingleton = () => {
   });
 };
 
-// Evita múltiplas instâncias em hot reload
+// singleton
 const globalForPrisma = globalThis;
-const prisma = globalForPrisma.prisma || prismaClientSingleton();
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+const prisma =
+  globalForPrisma.prisma || await prismaClientSingleton();
+
+if (process.env.NODE_ENV !== "production")
+  globalForPrisma.prisma = prisma;
 
 export default prisma;

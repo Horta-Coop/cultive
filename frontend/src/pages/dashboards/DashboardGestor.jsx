@@ -1,185 +1,177 @@
 import React, { useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useUserStore } from "@/stores/useUserStore";
+import StatCard from "@/components/ui/StatCard";
+import ResponsiveGrid from "@/components/ui/ResponsiveGrid";
 import {
-  Leaf,
-  Users,
   Sprout,
-  BarChart3,
-  Clock,
-  AlertTriangle,
+  Tractor,
+  Users,
+  Table,
+  CheckCircle2,
   CalendarDays,
   Megaphone,
-  UserPlus,
+  Clock,
+  Leaf,
   ClipboardList,
-  CheckCircle2,
 } from "lucide-react";
-import StatCard from "@/components/ui/StatCard";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import { Link } from "react-router-dom";
 
-// Importando suas stores separadas
-import { useHortaStore } from "@/stores/useHortaStore";
-import { usePlantioStore } from "@/stores/usePlantioStore";
-import { useColheitaStore } from "@/stores/useColheitaStore";
-import { useFamiliaStore } from "@/stores/useFamiliaStore";
-import { useUserStore } from "@/stores/useUserStore";
-
-const formatDate = (dateISO) => {
-  if (!dateISO) return "N/A";
-  const date = new Date(dateISO);
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "--";
   return date.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-};
+}
 
 const DashboardGestor = () => {
-  const {user} = useUserStore();
-  const { hortas, fetchHortas } = useHortaStore();
-  const { plantios, fetchPlantios } = usePlantioStore();
-  const { colheitas, fetchColheitas } = useColheitaStore();
-  const { familias, fetchFamilias } = useFamiliaStore();
+  const { user, getDashboardData, loading } = useUserStore();
 
   useEffect(() => {
-    fetchHortas();
-    fetchPlantios();
-    fetchColheitas();
-    fetchFamilias();
+    getDashboardData();
   }, []);
 
+  const familiasDoGestor = useMemo(
+    () => user?.familiasGestor || [],
+    [user?.familiasGestor]
+  );
+  const hortasDoGestor = useMemo(
+    () => user?.hortasGestor || [],
+    [user?.hortasGestor]
+  );
 
-  const gestorStats = useMemo(() => {
-    const hortasDoGestor = hortas.filter((h) => h.gestor.id === user?.id);
-    const hortaIds = hortasDoGestor.map((h) => h._id || h.id);
+  const plantiosAtivos = useMemo(
+    () =>
+      hortasDoGestor
+        .flatMap((h) => h.plantios || [])
+        .filter((p) => !p.dataColheita),
+    [hortasDoGestor]
+  );
 
-    const plantiosAtivos = plantios.filter(
-      (p) => hortaIds.includes(p.horta.id) && !p.dataColheita
-    );
+  const colheitas = useMemo(
+    () =>
+      hortasDoGestor
+        .flatMap((h) => (h.plantios || []).map((p) => p.colheita))
+        .filter((c) => c),
+    [hortasDoGestor]
+  );
 
-    const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const colheitasRecentes = colheitas.filter(
-      (c) =>
-        c.horta.id &&
-        hortaIds.includes(c.horta.id)
-    );
+  const ultimasColheitas = useMemo(
+    () =>
+      colheitas
+        .sort(
+          (a, b) =>
+            new Date(b.dataColheita).getTime() -
+            new Date(a.dataColheita).getTime()
+        )
+        .slice(0, 5)
+        .map((c) => ({
+          nome: c.cultura,
+          quantidade: `${c.quantidadeColhida?.d?.[0] || 0}${c.unidadeMedida}`,
+          data: formatDate(c.dataColheita),
+        })),
+    [colheitas]
+  );
 
-    const hoje = new Date();
+  const hoje = new Date();
 
-    const plantiosAtrasados = plantiosAtivos
-      .filter((p) => p.previsaoColheita && new Date(p.previsaoColheita) < hoje)
-      .map((p) => {
-        const horta = hortas.find(
-          (h) => h._id === p.hortaId || h.id === p.hortaId
-        );
-        return {
-          nome: `${p.cultura || "Plantio"} - ${horta?.nome || "Horta"}`,
-          diasAtraso: Math.ceil(
-            (hoje - new Date(p.previsaoColheita)) / (1000 * 60 * 60 * 24)
-          ),
-        };
-      })
-      .slice(0, 5);
+  const plantiosAtrasados = useMemo(
+    () =>
+      plantiosAtivos
+        .filter(
+          (p) => p.previsaoColheita && new Date(p.previsaoColheita) < hoje
+        )
+        .map((p) => {
+          const horta = hortasDoGestor.find((h) => h.id === p.hortaId);
+          return {
+            nome: `${p.cultura} - ${horta?.nome || "Horta não encontrada"}`,
+            diasAtraso: Math.ceil(
+              (hoje.getTime() - new Date(p.previsaoColheita).getTime()) /
+                (1000 * 60 * 60 * 24)
+            ),
+          };
+        })
+        .slice(0, 5),
+    [plantiosAtivos, hoje, hortasDoGestor]
+  );
 
-    const proximasColheitas = plantiosAtivos
-      .filter((p) => p.previsaoColheita && new Date(p.previsaoColheita) > hoje)
-      .map((p) => {
-        const horta = hortas.find(
-          (h) => h._id === p.hortaId || h.id === p.hortaId
-        );
-        return {
-          nome: `${p.cultura || "Plantio"} - ${horta?.nome || "Horta"}`,
-          data: formatDate(p.previsaoColheita),
-        };
-      })
-      .slice(0, 5);
+  const proximasColheitas = useMemo(
+    () =>
+      plantiosAtivos
+        .filter(
+          (p) => p.previsaoColheita && new Date(p.previsaoColheita) > hoje
+        )
+        .map((p) => {
+          const horta = hortasDoGestor.find((h) => h.id === p.hortaId);
+          return {
+            nome: `${p.cultura} - ${horta?.nome || "Horta não encontrada"}`,
+            data: formatDate(p.previsaoColheita),
+          };
+        })
+        .slice(0, 5),
+    [plantiosAtivos, hoje, hortasDoGestor]
+  );
 
-    const ultimasColheitas = colheitasRecentes
-      .sort((a, b) => new Date(b.dataColheita) - new Date(a.dataColheita))
-      .slice(0, 5)
-      .map((c) => ({
-        nome: c.cultura || "Colheita",
-        quantidade: `${c.quantidadeColhida || 0}${c.unidadeMedida || "kg"}`,
-        data: formatDate(c.dataColheita),
-      }));
-
-    return {
-      nomeGestor: user?.nome || "Gestor",
-      hortasGestor: hortasDoGestor.length,
-      familiasGestor: familias.length,
-      plantiosAtivos: plantiosAtivos.length,
-      colheitasRecentes: colheitasRecentes.length,
-      notificacoesPendentes: 5,
-      plantiosAtrasados,
-      proximasColheitas,
-      ultimasColheitasLista: ultimasColheitas,
-      proximosAvisos: [
-        { titulo: "Mutirão de limpeza", data: "07/12/2025" },
-        { titulo: "Reunião com famílias", data: "12/12/2025" },
-      ],
-    };
-  }, [user, hortas, plantios, colheitas, familias]);
-
-  const { plantiosAtrasados, proximasColheitas, ultimasColheitasLista } =
-    gestorStats;
+  const gestorStats = {
+    hortasGestor: hortasDoGestor.length,
+    familiasGestor: familiasDoGestor.length,
+    plantiosAtivos: plantiosAtivos.length,
+    colheitasRecentes: colheitas.length,
+    plantiosAtrasados,
+    proximasColheitas,
+    ultimasColheitasLista: ultimasColheitas,
+    proximosAvisos: [],
+  };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold mb-8">
-        Olá, {gestorStats.nomeGestor}! 👋
-      </h1>
+    <div className="">
+      <LoadingOverlay loading={loading} message="Carregando dados..." />
 
-      {/* Estatísticas principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-10">
+      {/* Estatísticas */}
+      <ResponsiveGrid>
         <StatCard
-          title="Hortas sob gestão"
+          title="Hortas Gerenciadas"
           value={gestorStats.hortasGestor}
           description="Você é responsável por essas hortas"
-          icon={<Leaf className="h-6 w-6 text-primary" />}
+          icon={Sprout}
         />
-
         <StatCard
-          title="Famílias sob gestão"
+          title="Famílias Vinculadas"
           value={gestorStats.familiasGestor}
-          description="Participando das suas hortas"
-          icon={<Users className="h-6 w-6 text-primary" />}
+          description="Famílias sob sua gestão"
+          icon={Users}
         />
-
         <StatCard
-          title="Plantios ativos"
+          title="Plantios Ativos"
           value={gestorStats.plantiosAtivos}
           description="Em andamento nas suas hortas"
-          icon={<Sprout className="h-6 w-6 text-primary" />}
+          icon={Tractor}
         />
-
         <StatCard
-          title="Colheitas recentes"
+          title="Colheitas Registradas"
           value={gestorStats.colheitasRecentes}
           description="Registradas nos últimos 30 dias"
-          icon={<BarChart3 className="h-6 w-6 text-primary" />}
+          icon={Table}
         />
+      </ResponsiveGrid>
 
-        <StatCard
-          title="Notificações pendentes"
-          value={gestorStats.notificacoesPendentes}
-          description="Aguardando sua revisão"
-          icon={<AlertTriangle className="h-6 w-6 text-warning" />}
-        />
-      </div>
-
-      {/* Alertas */}
+      {/* Plantios atrasados */}
       <div className="space-y-4 mb-10">
         <h2 className="text-2xl font-semibold">Alertas de Atenção 🚨</h2>
-
-        {plantiosAtrasados.length > 0 ? (
+        {gestorStats.plantiosAtrasados.length > 0 ? (
           <div className="alert alert-warning shadow-sm">
             <Clock className="h-6 w-6 shrink-0" />
             <div>
               <h3 className="font-bold">Plantios atrasados</h3>
               <p className="text-sm opacity-90">
-                Existem {plantiosAtrasados.length} plantios atrasados.
+                Existem {gestorStats.plantiosAtrasados.length} plantios
+                atrasados.
               </p>
-
               <ul className="text-xs mt-1 ml-3 list-disc">
-                {plantiosAtrasados.map((p, i) => (
+                {gestorStats.plantiosAtrasados.map((p, i) => (
                   <li key={i}>
                     {p.nome} —{" "}
                     <span className="text-warning font-medium">
@@ -189,7 +181,6 @@ const DashboardGestor = () => {
                 ))}
               </ul>
             </div>
-
             <Link to="/plantios" className="btn btn-sm btn-warning">
               Revisar
             </Link>
@@ -217,8 +208,8 @@ const DashboardGestor = () => {
             </h2>
 
             <ul className="mt-3 space-y-2">
-              {proximasColheitas.length > 0 ? (
-                proximasColheitas.map((c, i) => (
+              {gestorStats.proximasColheitas.length > 0 ? (
+                gestorStats.proximasColheitas.map((c, i) => (
                   <li
                     key={i}
                     className="flex justify-between p-2 bg-base-200/60 rounded-md"
@@ -252,17 +243,23 @@ const DashboardGestor = () => {
             </h2>
 
             <ul className="mt-3 space-y-2">
-              {gestorStats.proximosAvisos.map((a, i) => (
-                <li
-                  key={i}
-                  className="flex justify-between p-2 bg-base-200/60 rounded-md"
-                >
-                  <span className="truncate">{a.titulo}</span>
-                  <span className="text-sm text-base-content/70 font-medium">
-                    {a.data}
-                  </span>
+              {gestorStats.proximosAvisos.length > 0 ? (
+                gestorStats.proximosAvisos.map((a, i) => (
+                  <li
+                    key={i}
+                    className="flex justify-between p-2 bg-base-200/60 rounded-md"
+                  >
+                    <span className="truncate">{a.titulo}</span>
+                    <span className="text-sm text-base-content/70 font-medium">
+                      {a.data}
+                    </span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-base-content/60">
+                  Nenhum aviso pendente.
                 </li>
-              ))}
+              )}
             </ul>
 
             <div className="card-actions justify-end mt-4">
@@ -281,8 +278,8 @@ const DashboardGestor = () => {
             </h2>
 
             <ul className="mt-3 space-y-2">
-              {ultimasColheitasLista.length > 0 ? (
-                ultimasColheitasLista.map((c, i) => (
+              {gestorStats.ultimasColheitasLista.length > 0 ? (
+                gestorStats.ultimasColheitasLista.map((c, i) => (
                   <li
                     key={i}
                     className="flex justify-between p-2 bg-base-200/60 rounded-md"
@@ -318,14 +315,6 @@ const DashboardGestor = () => {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link
-              to="/usuarios"
-              className="btn btn-outline btn-primary justify-start gap-2"
-            >
-              <UserPlus className="h-5 w-5" />
-              Gerenciar Usuários
-            </Link>
-
             <Link
               to="/hortas"
               className="btn btn-outline btn-primary justify-start gap-2"

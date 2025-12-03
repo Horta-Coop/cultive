@@ -286,19 +286,19 @@ const ColheitasPage = () => {
               title="Colheitas Totais"
               value={colheitas.length.toString()}
               description="Colheitas registradas"
-              icon={<Sprout className="h-6 w-6" />}
+              icon={Sprout}
             />
             <StatCard
               title="Quantidade Total"
               value={`${totalQuantity} ${unitsUsed}`}
               description="Quantidade total colhida"
-              icon={<Scale className="h-6 w-6" />}
+              icon={Scale}
             />
             <StatCard
               title="Última Colheita"
               value={lastHarvestDate}
               description="Data da colheita mais recente"
-              icon={<Calendar className="h-6 w-6" />}
+              icon={Calendar}
               smallValue
             />
             <StatCard
@@ -307,7 +307,7 @@ const ColheitasPage = () => {
                 colheitas.map((c) => c.destinoColheita).filter(Boolean)
               ).size.toString()}
               description="Para onde a produção foi"
-              icon={<Truck className="h-6 w-6" />}
+              icon={Truck}
             />
           </ResponsiveGrid>
 

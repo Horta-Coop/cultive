@@ -1,6 +1,63 @@
 import prisma from "../config/prisma.js";
 import { FamiliaRepository } from "./FamiliaRepository.js";
 
+// Includes reutilizáveis
+const baseProfileInclude = {
+  PerfilAdmin: true,
+  PerfilGestor: true,
+  PerfilCultivador: true,
+  PerfilVoluntario: {
+    include: {
+      disponibilidade: true,
+    },
+  },
+};
+
+const baseFullInclude = {
+  ...baseProfileInclude,
+
+  familiasMembro: {
+    include: {
+      avisos: true,
+      hortas: {
+        include: {
+          plantios: {
+            include: { colheita: true },
+          },
+        },
+      },
+      membros: true,
+    },
+  },
+
+  familiasGestor: {
+    include: {
+      avisos: true,
+      hortas: {
+        include: {
+          plantios: {
+            include: { colheita: true },
+          },
+        },
+      },
+      membros: true,
+    },
+  },
+
+  hortasGestor: {
+    include: {
+      plantios: {
+        include: { colheita: true },
+      },
+    },
+  },
+
+  Log: {
+    orderBy: { data: "desc" },
+    take: 20,
+  },
+};
+
 export const UserRepository = {
   findByEmail: async (email) => {
     return await prisma.usuario.findUnique({ where: { email } });
@@ -11,47 +68,71 @@ export const UserRepository = {
       data: { nome, username, email, senhaHash, role, familiaId },
     });
   },
+
   updateUserAdmin: async (id, data) => {
     return await prisma.usuario.update({
       where: { id },
       data,
     });
   },
+
+  // Carrega apenas perfis do usuário
   findById: async (id) => {
     return await prisma.usuario.findUnique({
       where: { id },
+      include: baseProfileInclude,
     });
   },
+
   findByUsernameOrEmail: async ({ email, username }) => {
     return await prisma.usuario.findFirst({
-      where: {
-        OR: [{ email }, { username }],
-      },
+      where: { OR: [{ email }, { username }] },
+      include: baseProfileInclude,
     });
   },
+
   findByUsernameOrEmailWithPassword: async ({ email, username }) => {
     return await prisma.usuario.findFirst({
-      where: {
-        OR: [{ email }, { username }],
-      },
+      where: { OR: [{ email }, { username }] },
+      include: baseProfileInclude,
       showPassword: true,
     });
   },
-  findAll: async (options = {}) => {
-    return await prisma.usuario.findMany(options);
-  },
-  findAllUsersByGestor: async (gestorId) => {
-    const familias = await FamiliaRepository.findByGestorId(gestorId);
-    const familiaIds = familias.map((f) => f.id);
 
+  findAll: async (options = {}) => {
     return await prisma.usuario.findMany({
-      where: { familiaId: { in: familiaIds } },
+      ...options,
+      include: baseProfileInclude,
+    });
+  },
+
+findAllUsersByGestor: async (gestorId) => {
+  const familias = await FamiliaRepository.findByGestorId(gestorId);
+  const familiaIds = familias.map((f) => f.id);
+
+  if (familiaIds.length === 0) return [];
+
+  return await prisma.usuario.findMany({
+    where: { familiaId: { in: familiaIds } },
+    include: baseProfileInclude,
+  });
+},
+
+
+  findAllUsersWithoutFamily: async () => {
+    return await prisma.usuario.findMany({
+      where: {
+        familiaId: null,
+        role: { not: "admin"},
+      },
+      include: baseProfileInclude,
     });
   },
 
   findByResetToken: async (token) => {
     return await prisma.usuario.findFirst({
       where: { resetToken: token },
+      include: baseProfileInclude,
     });
   },
 
@@ -59,13 +140,14 @@ export const UserRepository = {
     return await prisma.usuario.update({
       where: { id },
       data,
+      include: baseProfileInclude,
     });
   },
 
   createProfileByRole: async (role, usuarioId, data) => {
     switch (role) {
       case "gestor":
-        return await prisma.perfilGestor.create({
+        return prisma.perfilGestor.create({
           data: {
             usuarioId,
             cargo: data.cargo,
@@ -76,7 +158,7 @@ export const UserRepository = {
         });
 
       case "cultivador":
-        return await prisma.perfilCultivador.create({
+        return prisma.perfilCultivador.create({
           data: {
             usuarioId,
             tipoExperiencia: data.tipoExperiencia,
@@ -87,7 +169,7 @@ export const UserRepository = {
         });
 
       case "voluntario":
-        return await prisma.perfilVoluntario.create({
+        return prisma.perfilVoluntario.create({
           data: {
             usuarioId,
             interesse: data.interesse,
@@ -97,7 +179,7 @@ export const UserRepository = {
         });
 
       case "admin":
-        return await prisma.perfilAdmin.create({
+        return prisma.perfilAdmin.create({
           data: {
             usuarioId,
             cargo: data.cargo,
@@ -111,5 +193,66 @@ export const UserRepository = {
           `Role "${role}" não reconhecida para criação de perfil`
         );
     }
+  },
+
+  deleteUser: async (id) => {
+    return await prisma.usuario.delete({
+      where: { id },
+    });
+  },
+
+  getUserFullData: async (userId) => {
+    return await prisma.usuario.findUnique({
+      where: { id: userId },
+      include: baseFullInclude,
+    });
+  },
+
+  getAdminDashboard: async () => {
+    const [
+      totalUsuarios,
+      totalFamilias,
+      totalHortas,
+      totalPlantios,
+      totalColheitas,
+      totalLogs,
+      ultimosUsuarios,
+      ultimosLogs,
+    ] = await Promise.all([
+      prisma.usuario.count(),
+      prisma.familia.count(),
+      prisma.horta.count(),
+      prisma.plantio.count(),
+      prisma.colheita.count(),
+      prisma.log.count(),
+      prisma.usuario.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      }),
+      prisma.log.findMany({
+        orderBy: { data: "desc" },
+        take: 8,
+      }),
+    ]);
+
+    return {
+      totais: {
+        usuarios: totalUsuarios,
+        familias: totalFamilias,
+        hortas: totalHortas,
+        plantios: totalPlantios,
+        colheitas: totalColheitas,
+        logs: totalLogs,
+      },
+      ultimosUsuarios,
+      ultimosLogs,
+    };
   },
 };

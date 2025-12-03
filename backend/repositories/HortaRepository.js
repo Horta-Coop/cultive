@@ -19,6 +19,7 @@ export const HortaRepository = {
         plantios: true,
         familia: true,
         gestor: true,
+        logs: true,
       },
     });
   },

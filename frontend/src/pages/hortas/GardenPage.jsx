@@ -237,7 +237,7 @@ const GardenPage = () => {
                   title="Hortas Totais"
                   value={hortas.length.toString()}
                   description="Hortas cadastradas no sistema"
-                  icon={<LayoutGrid className="h-6 w-6" />}
+                  icon={LayoutGrid}
                 />
                 <StatCard
                   title="Área Total Cultivada"
@@ -245,7 +245,7 @@ const GardenPage = () => {
                     .reduce((acc, h) => acc + h.areaCultivada, 0)
                     .toFixed(1)} m²`}
                   description="Somatório da área de todas as hortas"
-                  icon={<Sprout className="h-6 w-6" />}
+                  icon={Sprout}
                 />
                 <StatCard
                   title="Gestores Ativos"
@@ -253,7 +253,7 @@ const GardenPage = () => {
                     hortas.map((h) => h.gestor.nome)
                   ).size.toString()}
                   description="Gestores com hortas registradas"
-                  icon={<Tractor className="h-6 w-6" />}
+                  icon={Tractor}
                 />
               </>
             )}
@@ -264,7 +264,7 @@ const GardenPage = () => {
                   title="Minhas Hortas"
                   value={hortas.length.toString()}
                   description="Hortas sob minha gestão"
-                  icon={<LayoutGrid className="h-6 w-6" />}
+                  icon={LayoutGrid}
                 />
                 <StatCard
                   title="Área Cultivada Total"
@@ -272,7 +272,7 @@ const GardenPage = () => {
                     .reduce((acc, h) => acc + h.areaCultivada, 0)
                     .toFixed(1)} m²`}
                   description="Soma das áreas das suas hortas"
-                  icon={<Sprout className="h-6 w-6" />}
+                  icon={Sprout}
                 />
                 <StatCard
                   title="Média por Horta"
@@ -281,7 +281,7 @@ const GardenPage = () => {
                     (hortas.length || 1)
                   ).toFixed(1)} m²`}
                   description="Média da área cultivada por horta"
-                  icon={<AreaChart className="h-6 w-6" />}
+                  icon={AreaChart}
                 />
               </>
             )}
@@ -292,7 +292,7 @@ const GardenPage = () => {
                   title="Hortas da Família"
                   value={hortas.length.toString()}
                   description="Hortas em que você atua"
-                  icon={<LayoutGrid className="h-6 w-6" />}
+                  icon={LayoutGrid}
                 />
                 <StatCard
                   title="Área Total Envolvida"
@@ -300,7 +300,7 @@ const GardenPage = () => {
                     .reduce((acc, h) => acc + h.areaCultivada, 0)
                     .toFixed(1)} m²`}
                   description="Área total cultivada pela família"
-                  icon={<Sprout className="h-6 w-6" />}
+                  icon={Sprout}
                 />
                 <StatCard
                   title="Tipo de Horta Mais Comum"
@@ -315,7 +315,7 @@ const GardenPage = () => {
                       : "—"
                   }
                   description="Tipo predominante entre suas hortas"
-                  icon={<LayoutGrid className="h-6 w-6" />}
+                  icon={LayoutGrid}
                 />
               </>
             )}
@@ -413,7 +413,7 @@ const GardenPage = () => {
                     {user.role === "admin" && <td>{h.gestor.nome}</td>}
 
                     <td>
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex gap-1">
                         <AreaChart className="h-4 w-4 text-info" />{" "}
                         {h.areaCultivada.toFixed(1)}
                       </div>
