@@ -106,24 +106,23 @@ export const UserRepository = {
     });
   },
 
-findAllUsersByGestor: async (gestorId) => {
-  const familias = await FamiliaRepository.findByGestorId(gestorId);
-  const familiaIds = familias.map((f) => f.id);
+  findAllUsersByGestor: async (gestorId) => {
+    const familias = await FamiliaRepository.findByGestorId(gestorId);
+    const familiaIds = familias.map((f) => f.id);
 
-  if (familiaIds.length === 0) return [];
+    if (familiaIds.length === 0) return [];
 
-  return await prisma.usuario.findMany({
-    where: { familiaId: { in: familiaIds } },
-    include: baseProfileInclude,
-  });
-},
-
+    return await prisma.usuario.findMany({
+      where: { familiaId: { in: familiaIds } },
+      include: baseProfileInclude,
+    });
+  },
 
   findAllUsersWithoutFamily: async () => {
     return await prisma.usuario.findMany({
       where: {
         familiaId: null,
-        role: { not: "admin"},
+        role: { not: "admin" },
       },
       include: baseProfileInclude,
     });
@@ -209,50 +208,47 @@ findAllUsersByGestor: async (gestorId) => {
   },
 
   getAdminDashboard: async () => {
-    const [
-      totalUsuarios,
-      totalFamilias,
-      totalHortas,
-      totalPlantios,
-      totalColheitas,
-      totalLogs,
-      ultimosUsuarios,
-      ultimosLogs,
-    ] = await Promise.all([
-      prisma.usuario.count(),
-      prisma.familia.count(),
-      prisma.horta.count(),
-      prisma.plantio.count(),
-      prisma.colheita.count(),
-      prisma.log.count(),
-      prisma.usuario.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 8,
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          role: true,
-          createdAt: true,
-        },
-      }),
-      prisma.log.findMany({
-        orderBy: { data: "desc" },
-        take: 8,
-      }),
-    ]);
+    try {
+      const totalUsuarios = await prisma.usuario.count();
+      const totalFamilias = await prisma.familia.count();
+      const totalHortas = await prisma.horta.count();
+      const totalPlantios = await prisma.plantio.count();
+      const totalColheitas = await prisma.colheita.count();
+      const totalLogs = await prisma.log.count();
 
-    return {
-      totais: {
-        usuarios: totalUsuarios,
-        familias: totalFamilias,
-        hortas: totalHortas,
-        plantios: totalPlantios,
-        colheitas: totalColheitas,
-        logs: totalLogs,
-      },
-      ultimosUsuarios,
-      ultimosLogs,
-    };
+      const [ultimosUsuarios, ultimosLogs] = await Promise.all([
+        prisma.usuario.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            role: true,
+            createdAt: true,
+          },
+        }),
+        prisma.log.findMany({
+          orderBy: { data: "desc" },
+          take: 8,
+        }),
+      ]);
+
+      return {
+        totais: {
+          usuarios: totalUsuarios,
+          familias: totalFamilias,
+          hortas: totalHortas,
+          plantios: totalPlantios,
+          colheitas: totalColheitas,
+          logs: totalLogs,
+        },
+        ultimosUsuarios,
+        ultimosLogs,
+      };
+    } catch (error) {
+      console.error("Erro em getAdminDashboard:", error);
+      throw new Error("Não foi possível carregar os dados do dashboard.");
+    }
   },
 };

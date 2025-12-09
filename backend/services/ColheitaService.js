@@ -106,12 +106,29 @@ export const ColheitaService = {
         "Este plantio já foi colhido. Não é possível criar outra colheita."
       );
 
+    const dataColheita = data.dataColheita
+      ? new Date(data.dataColheita)
+      : new Date();
+    if (dataColheita < plantio.dataInicio) {
+      throw new Error(
+        `Data de colheita inválida: não pode ser anterior à data de início do plantio (${
+          plantio.dataInicio.toISOString().split("T")[0]
+        }).`
+      );
+    }
+
+    const quantidadeColhida = data.quantidadeColhida ?? 0;
+
+    if (quantidadeColhida > parseFloat(plantio.quantidadePlantada)) {
+      throw new Error(
+        `Quantidade colhida inválida: não pode ser maior que a quantidade plantada (${plantio.quantidadePlantada}).`
+      );
+    }
+
     const createData = {
       plantioId,
       cultura: data.cultura ?? plantio.cultura ?? null,
-      dataColheita: data.dataColheita
-        ? new Date(data.dataColheita)
-        : new Date(),
+      dataColheita,
       quantidadeColhida: data.quantidadeColhida ?? 0,
       unidadeMedida: data.unidadeMedida ?? "un",
       destinoColheita: data.destinoColheita ?? "consumo",
@@ -142,8 +159,27 @@ export const ColheitaService = {
 
     const updateData = {};
     if (data.cultura) updateData.cultura = data.cultura;
-    if (data.dataColheita)
-      updateData.dataColheita = new Date(data.dataColheita);
+    if (data.dataColheita) {
+      const novaData = new Date(data.dataColheita);
+      if (novaData < c.plantio.dataInicio) {
+        throw new Error(
+          `Data de colheita inválida: não pode ser anterior à data de início do plantio (${
+            c.plantio.dataInicio.toISOString().split("T")[0]
+          }).`
+        );
+      }
+      updateData.dataColheita = novaData;
+    }
+
+    if (data.quantidadeColhida) {
+      const qtd = data.quantidadeColhida;
+      if (qtd > parseFloat(c.plantio.quantidadePlantada)) {
+        throw new Error(
+          `Quantidade colhida inválida: não pode ser maior que a quantidade plantada (${c.plantio.quantidadePlantada}).`
+        );
+      }
+      updateData.quantidadeColhida = qtd;
+    }
     if (data.quantidadeColhida)
       updateData.quantidadeColhida = data.quantidadeColhida;
     if (data.unidadeMedida) updateData.unidadeMedida = data.unidadeMedida;

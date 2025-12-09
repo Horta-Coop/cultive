@@ -8,7 +8,7 @@ RUN npm i
 
 COPY . .
 
-RUN npm run build
+RUN npm run dev
 
 FROM nginx:alpine
 

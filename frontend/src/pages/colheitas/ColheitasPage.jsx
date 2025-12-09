@@ -69,7 +69,7 @@ const ColheitasPage = () => {
       dataColheita: "",
       quantidadeColhida: "",
       unidadeMedida: "",
-      destinoColheita: "consumo",
+      destinoColheita: "Consumo", // ✔ Enum correto
       observacoes: "",
       plantioId: "",
     },
@@ -77,26 +77,35 @@ const ColheitasPage = () => {
     reValidateMode: "all",
   });
 
-  const { reset } = form;
+  const { reset, watch } = form;
+
+  const selectedPlantioId = watch("plantioId");
 
   useEffect(() => {
     fetchColheitas();
   }, []);
 
   useEffect(() => {
-    const selectedPlantioId = form.watch("plantioId");
-
-    if (!selectedPlantioId) return;
+    if (!selectedPlantioId) {
+      form.setValue("cultura", "", { shouldValidate: true });
+      form.setValue("unidadeMedida", "", { shouldValidate: true });
+      return;
+    }
 
     const selectedPlantio = plantios.find((p) => p.id === selectedPlantioId);
 
     if (selectedPlantio) {
       form.setValue("cultura", selectedPlantio.cultura, {
         shouldValidate: true,
-        shouldDirty: true,
       });
+
+      if (!editingColheita) {
+        form.setValue("unidadeMedida", selectedPlantio.unidadeMedida, {
+          shouldValidate: true,
+        });
+      }
     }
-  }, [form, plantios]);
+  }, [selectedPlantioId, plantios, editingColheita]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -144,7 +153,7 @@ const ColheitasPage = () => {
           : "",
         quantidadeColhida: colheita?.quantidadeColhida + "" || "",
         unidadeMedida: colheita?.unidadeMedida || "",
-        destinoColheita: colheita?.destinoColheita || "consumo interno",
+        destinoColheita: colheita?.destinoColheita || "Consumo", // ✔ Corrigido
         observacoes: colheita?.observacoes || "",
         plantioId: colheita?.plantioId || "",
       });
@@ -161,13 +170,17 @@ const ColheitasPage = () => {
   const handleSaveColheita = async (data) => {
     setSaving(true);
 
-    const dataToSave = {
-      ...data,
-      dataColheita: data.dataColheita,
-      quantidadeColhida: parseFloat(data.quantidadeColhida),
-    };
+    const plantio = plantios.find((p) => p.id === data.plantioId);
 
     try {
+      colheitaSchema.parse(data, { context: { plantio } });
+
+      const dataToSave = {
+        ...data,
+        quantidadeColhida: parseFloat(data.quantidadeColhida),
+      };
+
+      
       if (editingColheita) {
         await updateColheita(editingColheita.id, dataToSave);
       } else {
@@ -311,7 +324,7 @@ const ColheitasPage = () => {
             />
           </ResponsiveGrid>
 
-          {/* Filtros e Busca (Mantidos) */}
+          {/* Filtros */}
           <div className="flex flex-col gap-4 mt-6 mb-4">
             <div className="flex items-center gap-2 px-4 py-2 border border-base-300 rounded-lg shadow-sm bg-base-100 w-full">
               <Search className="h-4 w-4 text-primary/70" />
@@ -324,9 +337,7 @@ const ColheitasPage = () => {
               />
             </div>
 
-            {/* Filtros Dropdown/Data */}
             <div className="flex flex-wrap gap-2">
-              {/* Filtro por Data */}
               <input
                 type="date"
                 className="input input-bordered flex-1 w-full sm:w-auto rounded-lg text-base-content/70"
@@ -334,7 +345,6 @@ const ColheitasPage = () => {
                 onChange={(e) => setDateFilter(e.target.value)}
               />
 
-              {/* Filtro por Cultura */}
               <select
                 className="select select-bordered flex-1 w-full sm:w-auto rounded-lg text-base-content/70"
                 value={culturaFilter}
@@ -350,7 +360,6 @@ const ColheitasPage = () => {
                 )}
               </select>
 
-              {/* Filtro por Destino */}
               <select
                 className="select select-bordered flex-1 w-full sm:w-auto rounded-lg text-base-content/70"
                 value={destinoFilter}
@@ -368,7 +377,7 @@ const ColheitasPage = () => {
             </div>
           </div>
 
-          {/* Botões de visualização (Mantidos) */}
+          {/* Botões de visualização */}
           <div className="flex justify-start gap-2 mb-4">
             <button
               className={`btn btn-sm ${
@@ -393,7 +402,7 @@ const ColheitasPage = () => {
             </button>
           </div>
 
-          {/* Renderização da lista */}
+          {/* Lista de colheitas */}
           {viewMode === "table" ? (
             <div className="overflow-x-auto shadow-xl rounded-xl border border-base-200">
               <table className="table w-full table-zebra table-fixed">
@@ -406,16 +415,14 @@ const ColheitasPage = () => {
                       "Quantidade",
                       "Observações",
                       "Ações",
-                    ]
-                      .filter(Boolean)
-                      .map((col) => (
-                        <th
-                          key={col}
-                          className="text-xs uppercase font-semibold tracking-wider"
-                        >
-                          {col}
-                        </th>
-                      ))}
+                    ].map((col) => (
+                      <th
+                        key={col}
+                        className="text-xs uppercase font-semibold tracking-wider"
+                      >
+                        {col}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -485,7 +492,6 @@ const ColheitasPage = () => {
                   key={c.id}
                   className="p-4 border border-base-200 rounded-lg shadow-sm hover:shadow-md transition-shadow relative"
                 >
-                  {/* Dropdown dos cards */}
                   <div className="absolute top-2 right-2">
                     <SmartDropdown
                       buttonClass="btn btn-ghost btn-xs text-base-content/70"
@@ -520,7 +526,7 @@ const ColheitasPage = () => {
                     {new Date(c.dataColheita).toLocaleDateString("pt-BR")}
                   </div>
                   <div className="text-sm mt-1">
-                    {c.observacoes || "Usuário não informado"}
+                    {c.observacoes || "Usuário não informou"}
                   </div>
 
                   <div className="mt-2">
@@ -580,7 +586,7 @@ const ColheitasPage = () => {
                     placeholder="Ex: Tomate, Alface"
                     name="cultura"
                     control={form.control}
-                    disabled={!!form.watch("plantioId")}
+                    disabled={!!selectedPlantioId}
                   />
                 </div>
 
@@ -616,6 +622,7 @@ const ColheitasPage = () => {
                       type="select"
                       name="unidadeMedida"
                       placeholder="Unidade de Medida"
+                      disabled={!!selectedPlantioId}
                       control={form.control}
                       options={EUnidadeMedida.options.map((u) => ({
                         value: u,
@@ -623,6 +630,12 @@ const ColheitasPage = () => {
                           u.charAt(0).toUpperCase() +
                           u.slice(1).replace("_", " "),
                       }))}
+                      defaultValue={
+                        selectedPlantioId
+                          ? plantios.find((p) => p.id === selectedPlantioId)
+                              ?.unidadeMedida
+                          : ""
+                      }
                     />
                   </div>
                 </div>
@@ -658,7 +671,6 @@ const ColheitasPage = () => {
             )}
           </FormModal>
 
-          {/* Floating Button (Só aparece se puder editar) */}
           {canEditOrDelete && (
             <FloatingButton
               onClick={() => handleOpenModal(null)}

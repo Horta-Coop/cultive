@@ -20,22 +20,32 @@ const typeColors = {
   experimental: "badge-accent",
 
   // Tipos de solo
+  // Tipos de solo (com mais opções)
   argiloso: "badge-primary",
   arenoso: "badge-success",
   humoso: "badge-warning",
   siltoso: "badge-info",
   calcario: "badge-secondary",
   turfa: "badge-accent",
-  rochosos: "badge-error",
-  misturado: "badge-outline",
+  pedregoso: "badge-error",
+  lateritico: "badge-error",
+  franco_arenoso: "badge-info",
+  franco_argiloso: "badge-warning",
+  franco_limoso: "badge-primary",
+  loam: "badge-secondary",
+  aluvial: "badge-accent",
 
   // Tipos de plantação
   convencional: "badge-primary",
   hidroponico: "badge-warning",
   aeroponico: "badge-info",
-  intensivo: "badge-error",
-  extensivo: "badge-secondary",
-  composto: "badge-accent",
+  agroflorestal: "badge-success",
+  permacultura: "badge-accent",
+  protegido: "badge-secondary",
+  terreno_aberto: "badge-outline",
+  intensiva: "badge-error",
+  extensiva: "badge-secondary",
+  estufa: "badge-primary",
 
   // Dias da semana
   dom: "badge-error",

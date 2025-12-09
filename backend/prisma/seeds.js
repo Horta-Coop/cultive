@@ -1,191 +1,242 @@
+import { PrismaClient } from "@prisma/client"; // { PrismaClient }
 
-import prisma from "../utils/prisma.js";
+const prisma = new PrismaClient();
 
 async function main() {
-  // Usuários
-  const usuarios = await Promise.all([
-    prisma.usuario.create({
-      data: {
-        nome: "Maria Gestora",
-        username: "mariag",
-        email: "maria.g@example.com",
-        senhaHash: "hash123",
-        role: "gestor",
-      },
-    }),
-    prisma.usuario.create({
-      data: {
-        nome: "João Voluntário",
-        username: "joaov",
-        email: "joao.v@example.com",
-        senhaHash: "hash123",
-        role: "voluntario",
-      },
-    }),
-    prisma.usuario.create({
-      data: {
-        nome: "Ana Cultivadora",
-        username: "anac",
-        email: "ana.c@example.com",
-        senhaHash: "hash123",
-        role: "cultivador",
-      },
-    }),
-    prisma.usuario.create({
-      data: {
-        nome: "Carlos Admin",
-        username: "carlosa",
-        email: "carlos.a@example.com",
-        senhaHash: "hash123",
+  console.log("🌱 Iniciando seed...");
+
+  // ------------------------------
+  // USUÁRIOS
+  // ------------------------------
+  await prisma.usuario.createMany({
+    data: [
+      {
+        id: "u-admin-001",
+        email: "admin@sistema.com",
+        senhaHash: "hash_admin",
+        telefone: "44999990000",
+        nome: "Administrador Geral",
+        username: "admin",
         role: "admin",
+        onBoarding: true,
       },
-    }),
-  ]);
+      {
+        id: "u-gestor-001",
+        email: "gestor@hortas.com",
+        senhaHash: "hash_gestor",
+        telefone: "44988887777",
+        nome: "Maria Silva",
+        username: "maria.gestor",
+        role: "gestor",
+        onBoarding: true,
+      },
+      {
+        id: "u-cult-001",
+        email: "joao@hortas.com",
+        senhaHash: "hash_cult",
+        telefone: "44977776666",
+        nome: "João Barbosa",
+        username: "joao.cult",
+        role: "cultivador",
+        onBoarding: true,
+        familiaId: "fam-001",
+      },
+      {
+        id: "u-vol-001",
+        email: "ana@voluntaria.com",
+        senhaHash: "hash_vol",
+        telefone: "44966665555",
+        nome: "Ana Oliveira",
+        username: "ana.vol",
+        role: "voluntario",
+        onBoarding: true,
+      },
+    ],
+  });
 
-  // Famílias
-  const familia1 = await prisma.familia.create({
+  // ------------------------------
+  // PERFIS
+  // ------------------------------
+
+  await prisma.perfilAdmin.create({
     data: {
-      nome: "Família Silva",
-      representante: "Carlos Silva",
-      qtdMembros: 3,
-      gestorId: usuarios[0].id, // Maria Gestora
-      membros: {
-        connect: [ { id: usuarios[1].id }, { id: usuarios[2].id } ], // João e Ana
-      },
+      id: "p-admin-001",
+      cargo: "Administrador Geral",
+      ativo: true,
+      usuarioId: "u-admin-001",
     },
   });
 
-  const familia2 = await prisma.familia.create({
-    data: {
-      nome: "Família Oliveira",
-      representante: "Fernanda Oliveira",
-      qtdMembros: 2,
-      gestorId: usuarios[0].id, // mesma gestora
-      membros: {
-        create: [
-          {
-            nome: "Pedro Oliveira",
-            username: "pedroo",
-            email: "pedro.o@example.com",
-            senhaHash: "hash123",
-            role: "cultivador",
-          },
-          {
-            nome: "Lucia Oliveira",
-            username: "luciao",
-            email: "lucia.o@example.com",
-            senhaHash: "hash123",
-            role: "cultivador",
-          },
-        ],
-      },
-    },
-  });
-
-  // Perfis
   await prisma.perfilGestor.create({
     data: {
-      usuarioId: usuarios[0].id,
-      cargo: "Gestor Regional",
-      organizacaoVinculada: "ONG Verde Vida",
+      id: "p-gestor-001",
+      usuarioId: "u-gestor-001",
+      cargo: "Gestora Comunitária",
+      organizacaoVinculada: "Associação Verde Viva",
       recebeAlertas: true,
-    },
-  });
-
-  await prisma.perfilVoluntario.create({
-    data: {
-      usuarioId: usuarios[1].id,
-      interesse: "Irrigação",
-      disponivel: true,
     },
   });
 
   await prisma.perfilCultivador.create({
     data: {
-      usuarioId: usuarios[2].id,
-      tipoExperiencia: "iniciante",
-      habilidades: "Plantio básico, rega",
-      plantasFavoritas: "Alface, Tomate",
+      id: "p-cult-001",
+      usuarioId: "u-cult-001",
+      tipoExperiencia: "Horta caseira",
+      habilidades: "Plantio de verduras",
+      plantasFavoritas: "Alface, cenoura",
     },
   });
 
-  await prisma.perfilAdmin.create({
+  await prisma.perfilVoluntario.create({
     data: {
-      usuarioId: usuarios[3].id,
-      cargo: "Administrador do Sistema",
-      ativo: true,
+      id: "p-vol-001",
+      usuarioId: "u-vol-001",
+      interesse: "Ajudar na colheita",
+      disponivel: true,
     },
   });
 
-  // Hortas
-  const horta1 = await prisma.horta.create({
+  // ------------------------------
+  // DISPONIBILIDADE
+  // ------------------------------
+
+  await prisma.disponibilidade.create({
     data: {
+      id: "disp-001",
+      usuarioId: "u-vol-001",
+      diaSemana: "SAB",
+      horarioIni: new Date("2025-01-01T08:00:00.000Z"),
+      horarioFim: new Date("2025-01-01T12:00:00.000Z"),
+      perfilVoluntarioId: "p-vol-001",
+    },
+  });
+
+  // ------------------------------
+  // FAMÍLIA
+  // ------------------------------
+
+  await prisma.familia.create({
+    data: {
+      id: "fam-001",
+      nome: "Família Barbosa",
+      representante: "João Barbosa",
+      qtdMembros: 4,
+      descricao: "Família tradicional do bairro.",
+      gestorId: "u-gestor-001",
+    },
+  });
+
+  // ------------------------------
+  // HORTA
+  // ------------------------------
+
+  await prisma.horta.create({
+    data: {
+      id: "horta-001",
       nome: "Horta Comunitária Central",
-      endereco: "Rua das Flores, 123",
-      cordenada: "-23.55052,-46.633308",
       areaCultivada: 120.5,
       tipoSolo: "Argiloso",
       tipoHorta: "comunitaria",
-      familiaId: familia1.id,
-      gestorId: usuarios[0].id,
+      endereco: "Rua Principal, 123",
+      descricao: "Horta comunitária da região central.",
+      gestorId: "u-gestor-001",
+      familiaId: "fam-001",
     },
   });
 
-  const horta2 = await prisma.horta.create({
-    data: {
-      nome: "Horta Escolar ABC",
-      endereco: "Rua da Escola, 456",
-      cordenada: "-23.55100,-46.630000",
-      areaCultivada: 80.0,
-      tipoSolo: "Arenoso",
-      tipoHorta: "escolar",
-      familiaId: familia2.id,
-      gestorId: usuarios[0].id,
-    },
-  });
+  // ------------------------------
+  // PLANTIO
+  // ------------------------------
 
-  // Plantios e colheitas
-  const plantio1 = await prisma.plantio.create({
+  await prisma.plantio.create({
     data: {
+      id: "plantio-001",
+      tipoPlantacao: "Alface Crespa",
+      previsaoColheita: new Date("2025-02-20T00:00:00.000Z"),
+      quantidadePlantada: 200,
+      unidadeMedida: "mudas",
+      hortaId: "horta-001",
       cultura: "Alface",
-      tipoPlantacao: "orgânico",
-      dataInicio: new Date("2025-07-01"),
-      previsaoColheita: new Date("2025-07-20"),
-      quantidadePlantada: 50,
-      unidadeMedida: "unidades",
-      hortaId: horta1.id,
+      dataInicio: new Date("2025-01-15T00:00:00.000Z"),
     },
   });
+
+  // ------------------------------
+  // COLHEITA
+  // ------------------------------
 
   await prisma.colheita.create({
     data: {
+      id: "colheita-001",
+      dataColheita: new Date("2025-02-18T00:00:00.000Z"),
+      quantidadeColhida: 180,
+      unidadeMedida: "mudas",
+      destinoColheita: "Distribuição comunitária",
+      plantioId: "plantio-001",
       cultura: "Alface",
-      dataColheita: new Date("2025-07-19"),
-      quantidadeColhida: 45,
-      unidadeMedida: "unidades",
-      destinoColheita: "doação",
-      plantioId: plantio1.id,
     },
   });
 
-  const plantio2 = await prisma.plantio.create({
+  // ------------------------------
+  // AVISO
+  // ------------------------------
+
+  await prisma.aviso.create({
     data: {
-      cultura: "Tomate",
-      tipoPlantacao: "convencional",
-      dataInicio: new Date("2025-07-10"),
-      previsaoColheita: new Date("2025-08-05"),
-      quantidadePlantada: 30,
-      unidadeMedida: "unidades",
-      hortaId: horta2.id,
+      id: "aviso-001",
+      titulo: "Reunião de organização",
+      descricao: "Reunião extraordinária no sábado.",
+      dataEvento: new Date("2025-01-10T14:00:00.000Z"),
+      familiaId: "fam-001",
     },
   });
 
-  console.log("Seed populada com sucesso!");
+  // ------------------------------
+  // NOTIFICAÇÃO
+  // ------------------------------
+
+  await prisma.notificacao.create({
+    data: {
+      id: "notif-001",
+      usuarioId: "u-cult-001",
+      titulo: "Plantio próximo da colheita",
+      mensagem: "O plantio de alface está próximo da data prevista!",
+    },
+  });
+
+  // ------------------------------
+  // LOG
+  // ------------------------------
+
+  await prisma.log.create({
+    data: {
+      id: "log-001",
+      usuarioId: "u-gestor-001",
+      acao: "Criou nova horta",
+      contexto: "Horta Comunitária Central",
+    },
+  });
+
+  // ------------------------------
+  // FAQ
+  // ------------------------------
+
+  await prisma.faq.create({
+    data: {
+      id: "faq-001",
+      pergunta: "Como participar da horta comunitária?",
+      resposta: "Você pode se cadastrar como voluntário na plataforma.",
+      categoria: "Participação",
+      ordem: 1,
+    },
+  });
+
+  console.log("🌱 Seed finalizado com sucesso!");
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error("❌ Erro no seed:", e);
     process.exit(1);
   })
   .finally(async () => {

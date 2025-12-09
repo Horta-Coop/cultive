@@ -27,6 +27,7 @@ import { useHortaStore } from "@/stores/useHortaStore";
 import { useUserStore } from "@/stores/useUserStore";
 
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import { ETipoPlantacao } from "../../lib/validation/plantioSchema";
 
 const PlantiosPage = () => {
   const modalRef = useRef(null);
@@ -182,7 +183,6 @@ const PlantiosPage = () => {
       return matchesSearch;
     });
   }, [hortas, plantios, searchQuery]);
-
 
   const canEditOrDelete = user.role === "admin" || user.role === "gestor";
 
@@ -513,11 +513,12 @@ const PlantiosPage = () => {
                 name="tipoPlantacao"
                 placeholder="Selecione o tipo de plantio"
                 control={form.control}
-                options={[
-                  { value: "Orgânico", label: "Orgânico" },
-                  { value: "Convencional", label: "Convencional" },
-                  { value: "Hidropônico", label: "Hidropônico" },
-                ]}
+                options={ETipoPlantacao.options.map((tipo) => ({
+                  value: tipo,
+                  label:
+                    tipo.charAt(0).toUpperCase() +
+                    tipo.slice(1).replace("_", " "),
+                }))}
               />
             </div>
 

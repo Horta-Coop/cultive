@@ -176,22 +176,30 @@ export const FormField = ({
         </select>
       )}
 
-      {/* --- SEARCHABLE SELECT --- */}
       {isSearchable && (
         <div className="relative w-full">
           <input
             type="text"
             placeholder={placeholder}
             className={`${baseClass} ${stateClass} ${leftPadding} ${rightPadding}`}
-            value={searchText}
+            value={
+              disabled
+                ? field.value
+                  ? options.find((o) => o.value === field.value)?.label
+                  : ""
+                : searchText
+            }
             onChange={(e) => {
-              setSearchText(e.target.value);
-              setIsOpen(true);
+              if (!disabled) {
+                setSearchText(e.target.value);
+                setIsOpen(true);
+              }
             }}
             onClick={() => !disabled && setIsOpen(!isOpen)}
             disabled={disabled}
+            readOnly={disabled} // garante que não edita se desabilitado
           />
-          {isOpen && (
+          {!disabled && isOpen && (
             <ul className="absolute left-0 mt-1 z-50 w-full max-h-60 overflow-auto border border-base-300 rounded-md bg-base-100 shadow-lg scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-base-100">
               {filteredOptions.length > 0 ? (
                 filteredOptions.map((opt) => (

@@ -225,6 +225,61 @@ export const UserService = {
     return user;
   },
 
+  updateUserGestor: async (userId, gestorId, data) => {
+    const usuario = await UserRepository.findById(userId);
+    if (!usuario) {
+      throw new Error("Usuário não encontrado");
+    }
+
+    if (["admin", "gestor"].includes(usuario.role)) {
+      throw new Error(
+        "Gestores não podem atualizar administradores ou outros gestores"
+      );
+    }
+
+    const familiasDoGestor = await FamiliaRepository.findByGestorId(gestorId);
+    const idsFamiliasDoGestor = familiasDoGestor.map((f) => f.id);
+
+    const usuarioPertenceAoGestor =
+      usuario.familiaId && idsFamiliasDoGestor.includes(usuario.familiaId);
+
+    const usuarioSemFamilia = !usuario.familiaId;
+
+    if (!usuarioPertenceAoGestor && !usuarioSemFamilia) {
+      throw new Error("Gestor não pode atualizar usuários fora de sua gestão");
+    }
+
+    const camposProibidos = [
+      "role",
+      "username",
+      "email",
+      "senhaHash",
+      "resetToken",
+      "resetTokenExpiry",
+    ];
+    camposProibidos.forEach((c) => {
+      if (c in data) delete data[c];
+    });
+
+    if (data.familiaId) {
+      if (!idsFamiliasDoGestor.includes(data.familiaId)) {
+        throw new Error(
+          "Gestor não pode mover usuário para uma família que não gerencia"
+        );
+      }
+    }
+
+    const updated = await UserRepository.updateUser(userId, data);
+
+    await LogRepository.create({
+      usuarioId: gestorId,
+      acao: "Gestor atualizou usuário",
+      contexto: `UsuárioID: ${userId}, Dados: ${JSON.stringify(data)}`,
+    });
+
+    return updated;
+  },
+
   generateTempPassword: (length = 12) => {
     return crypto.randomBytes(length).toString("base64").slice(0, length);
   },

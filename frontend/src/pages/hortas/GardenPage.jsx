@@ -29,7 +29,7 @@ import { useHortaStore } from "@/stores/useHortaStore";
 import { useUserStore } from "@/stores/useUserStore";
 import { useFamiliaStore } from "@/stores/useFamiliaStore";
 import LoadingOverlay from "@/components/ui/LoadingOverlay";
-import { EHortaEnum } from "../../lib/validation/hortaSchema";
+import { EHortaEnum, ESoloEnum } from "../../lib/validation/hortaSchema";
 import SmartDropdown from "../../components/ui/SmartDropdown";
 
 const GardenPage = () => {
@@ -637,11 +637,10 @@ const GardenPage = () => {
               placeholder="Tipo de Solo"
               name="tipoSolo"
               control={form.control}
-              options={[
-                { value: "Argiloso", label: "Argiloso" },
-                { value: "Arenoso", label: "Arenoso" },
-                { value: "Humoso", label: "Humoso" },
-              ]}
+              options={ESoloEnum.options.map((u) => ({
+                value: u,
+                label: u.charAt(0).toUpperCase() + u.slice(1).replace("_", " "),
+              }))}
             />
           </div>
 

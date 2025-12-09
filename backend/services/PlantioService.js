@@ -62,11 +62,28 @@ export const PlantioService = {
         throw new Error("Acesso negado");
     }
 
-    // Converte strings de data para Date antes de criar
+    const dataInicioDate = new Date(dataInicio);
+    const previsaoColheitaDate = previsaoColheita
+      ? new Date(previsaoColheita)
+      : null;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (dataInicioDate < hoje) {
+      throw new Error("A data de plantio não pode ser anterior à data atual.");
+    }
+
+    if (previsaoColheitaDate && previsaoColheitaDate < dataInicioDate) {
+      throw new Error(
+        "A previsão de colheita não pode ser anterior à data de plantio."
+      );
+    }
+
     const plantioData = {
       ...rest,
-      dataInicio: new Date(dataInicio),
-      previsaoColheita: new Date(previsaoColheita),
+      dataInicio: dataInicioDate,
+      previsaoColheita: previsaoColheitaDate,
     };
 
     return await PlantioRepository.create(plantioData);
@@ -76,11 +93,32 @@ export const PlantioService = {
     const plantio = await PlantioRepository.findById(id);
     if (!plantio) throw new Error("Plantio não encontrado");
 
-    let updateData = { ...data };
+    const dataInicioDate = data.dataInicio
+      ? new Date(data.dataInicio)
+      : new Date(plantio.dataInicio);
+    const previsaoColheitaDate = data.previsaoColheita
+      ? new Date(data.previsaoColheita)
+      : plantio.previsaoColheita
+      ? new Date(plantio.previsaoColheita)
+      : null;
 
-    if (data.dataInicio) updateData.dataInicio = new Date(data.dataInicio);
-    if (data.previsaoColheita)
-      updateData.previsaoColheita = new Date(data.previsaoColheita);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (dataInicioDate < hoje) {
+      throw new Error("A data de plantio não pode ser anterior à data atual.");
+    }
+    if (previsaoColheitaDate && previsaoColheitaDate < dataInicioDate) {
+      throw new Error(
+        "A previsão de colheita não pode ser anterior à data de plantio."
+      );
+    }
+
+    const updateData = {
+      ...data,
+      dataInicio: dataInicioDate,
+      previsaoColheita: previsaoColheitaDate,
+    };
 
     if (requester.role === "admin")
       return await PlantioRepository.update(id, updateData);

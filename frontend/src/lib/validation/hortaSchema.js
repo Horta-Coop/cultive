@@ -1,12 +1,32 @@
 import { z } from "zod";
 
-export const EHortaEnum = z.enum([
+const tiposHortaValidos = [
   "escolar",
   "comunitaria",
   "institucional",
   "ong",
   "familiar",
-]);
+];
+const tiposSoloValidos = [
+  "Argiloso",
+  "Arenoso",
+  "Humoso",
+  "Calcário",
+  "Laterítico",
+  "Siltoso",
+  "Turfa",
+  "Pedregoso",
+  "Franco-arenoso",
+  "Franco-argiloso",
+  "Franco-limoso",
+  "Loam",
+  "Orgânico",
+  "Aluvial",
+];
+
+export const EHortaEnum = z.enum(tiposHortaValidos);
+export const ESoloEnum = z.enum(tiposSoloValidos);
+
 
 const hortaSchema = z.object({
   nome: z
@@ -19,12 +39,19 @@ const hortaSchema = z.object({
     .min(4, "O endereço deve ter pelo menos 4 caracteres")
     .max(200, "O endereço é muito longo"),
 
-  tipoHorta: EHortaEnum,
+  tipoHorta: z
+    .string()
+    .refine((val) => tiposHortaValidos.includes(val), {
+      message:
+        "Por favor, selecione um tipo de horta válido",
+    }),
 
   tipoSolo: z
     .string()
-    .min(1, "Selecione o tipo de solo")
-    .max(100, "Tipo de solo inválido"),
+    .refine((val) => tiposSoloValidos.includes(val), {
+      message:
+        "Por favor, selecione um tipo de solo válido",
+    }),
 
   areaCultivada: z
     .string()
